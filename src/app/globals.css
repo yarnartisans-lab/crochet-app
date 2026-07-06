@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --- CR PAPO MOBILE OPTIMIZATIONS --- */
+
+/* 1. Prevent iOS Safari from auto-zooming when clicking inputs on the Publish/Edit pages */
+@media screen and (max-width: 768px) {
+  input, 
+  select, 
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* 2. Hide ugly scrollbars on the mobile image carousel, but keep it swipeable */
+.overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
+.overflow-x-auto {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* 3. Make touch targets slightly larger on mobile for the row tracker */
+@media screen and (max-width: 768px) {
+  .cursor-pointer {
+    min-height: 44px; /* Minimum Apple touch target size */
+  }
+}
