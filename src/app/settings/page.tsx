@@ -160,7 +160,12 @@ export default function SettingsPage() {
         setWebsite(finalWebsite);
         setMessage({ text: 'Profile updated successfully!', type: 'success' });
       } else {
-        setMessage({ text: error.message, type: 'error' });
+        // UPDATED: Intercept the raw SQL duplicate key error
+        if (error.message.includes('duplicate key') || error.message.includes('profiles_username_key')) {
+          setMessage({ text: 'That username is already taken. Please choose another one.', type: 'error' });
+        } else {
+          setMessage({ text: error.message, type: 'error' });
+        }
       }
     }
     setSaving(false);

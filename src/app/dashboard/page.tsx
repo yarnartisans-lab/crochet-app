@@ -57,12 +57,21 @@ export default function DesignerDashboard() {
     if (!confirmDelete) return;
 
     try {
-      const { error } = await supabase
+      // 1. Delete associated steps first to prevent foreign key constraint errors
+      const { error: stepsError } = await supabase
+        .from('pattern_steps')
+        .delete()
+        .eq('pattern_id', patternId);
+
+      if (stepsError) throw stepsError;
+
+      // 2. Now delete the main pattern
+      const { error: patternError } = await supabase
         .from('patterns')
         .delete()
         .eq('id', patternId);
 
-      if (error) throw error;
+      if (patternError) throw patternError;
 
       // Instantly remove the deleted pattern from the UI
       setPatterns((prevPatterns) => prevPatterns.filter((p) => p.id !== patternId));
