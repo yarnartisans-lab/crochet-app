@@ -18,7 +18,11 @@ export default function PublishWizard() {
   const [hookSize, setHookSize] = useState('');
   const [yarnWeight, setYarnWeight] = useState('');
   
-  // NEW: State for up to 4 images
+  // NEW: Category and Language States
+  const [category, setCategory] = useState('Garments');
+  const [language, setLanguage] = useState('English');
+  
+  // State for up to 4 images
   const [images, setImages] = useState<{file: Blob, preview: string}[]>([]);
   
   const [affiliateLink, setAffiliateLink] = useState('');
@@ -55,7 +59,7 @@ export default function PublishWizard() {
     }
   };
 
-  // NEW: Handle Multiple Images
+  // Handle Multiple Images
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (images.length + files.length > 4) {
@@ -143,9 +147,11 @@ export default function PublishWizard() {
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
+        category, // Newly Added
+        language, // Newly Added
         image_url: mainImageUrl, // For homepage compatibility
         image_urls: finalUrls,   // For the new carousel
-        affiliate_link: affiliateLink || null,
+        affiliate_link: affiliateLink || null, // Keeping the column name identical to avoid breaking the DB
         video_link: videoLink || null,
         is_published: true
       })
@@ -195,18 +201,20 @@ export default function PublishWizard() {
                 <h2 className="text-2xl font-extrabold tracking-tight mb-1">The Basics</h2>
                 <p className="text-sm text-gray-500">Let's start with the core details.</p>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium mb-2">Pattern Title</label>
                 <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Chunky Ribbed Beanie" className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]"/>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Difficulty</label>
                   <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
-                    <option>Beginner</option>
-                    <option>Easy</option>
-                    <option>Intermediate</option>
-                    <option>Advanced</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
                   </select>
                 </div>
                 <div>
@@ -214,10 +222,38 @@ export default function PublishWizard() {
                   <input type="text" value={hookSize} onChange={(e) => setHookSize(e.target.value)} placeholder="e.g. 5.0mm (H)" className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]"/>
                 </div>
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Yarn Weight</label>
                 <input type="text" value={yarnWeight} onChange={(e) => setYarnWeight(e.target.value)} placeholder="e.g. Worsted / Weight 4" className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]"/>
               </div>
+
+              {/* NEW: Category and Language Selectors */}
+              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6 mt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Pattern Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
+                    <option value="Garments">Garments (Sweaters, Tops)</option>
+                    <option value="Accessories">Accessories (Hats, Bags)</option>
+                    <option value="Amigurumi/Plushies">Amigurumi / Plushies</option>
+                    <option value="Home Decor">Home Decor</option>
+                    <option value="Blankets">Blankets</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Language</label>
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
+                    <option value="English">English</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="German">German</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Dutch">Dutch</option>
+                    <option value="Portuguese">Portuguese</option>
+                  </select>
+                </div>
+              </div>
+
               <button onClick={() => setStep(2)} disabled={!title} className="w-full rounded-md bg-[#2D2D2D] py-3 text-sm font-semibold text-white shadow-sm hover:bg-black disabled:opacity-50 mt-4 transition-colors">Continue to Media →</button>
             </div>
           )}
@@ -227,7 +263,7 @@ export default function PublishWizard() {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
                 <h2 className="text-2xl font-extrabold tracking-tight mb-1">Media & Monetization</h2>
-                <p className="text-sm text-gray-500">Add up to 4 photos and your affiliate links.</p>
+                <p className="text-sm text-gray-500">Add up to 4 photos and your optional links.</p>
               </div>
 
               {/* Multiple Image Uploader */}
@@ -256,8 +292,9 @@ export default function PublishWizard() {
 
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <div>
+                  {/* UPDATED: Cleaned up the affiliate terminology */}
                   <label className="block text-sm font-medium mb-2 flex items-center gap-2">
-                    Yarn Affiliate Link <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">Revenue</span>
+                    Yarn Link <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">Revenue</span>
                   </label>
                   <input type="url" value={affiliateLink} onChange={(e) => setAffiliateLink(e.target.value)} placeholder="https://amazon.com/your-yarn-link" className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-500"/>
                   <p className="text-xs text-gray-500 mt-1">If they buy yarn through this link, you earn a commission.</p>

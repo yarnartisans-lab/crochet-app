@@ -52,6 +52,26 @@ export default function DesignerDashboard() {
     loadUserData();
   }, []);
 
+  const handleDelete = async (patternId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this pattern? This action cannot be undone.");
+    if (!confirmDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('patterns')
+        .delete()
+        .eq('id', patternId);
+
+      if (error) throw error;
+
+      // Instantly remove the deleted pattern from the UI
+      setPatterns((prevPatterns) => prevPatterns.filter((p) => p.id !== patternId));
+    } catch (error) {
+      console.error('Error deleting pattern:', error);
+      alert('Failed to delete pattern. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] pb-24">
       <nav className="bg-white border-b border-gray-200 px-6 py-4">
@@ -154,6 +174,12 @@ export default function DesignerDashboard() {
                       <td className="px-6 py-4 text-right space-x-4">
                         <Link href={`/edit/${pattern.id}`} className="text-gray-500 font-medium hover:text-gray-900">Edit</Link>
                         <Link href={`/pattern/${pattern.id}`} className="text-[#D97757] font-medium hover:underline">View</Link>
+                        <button 
+                          onClick={() => handleDelete(pattern.id)} 
+                          className="text-red-500 font-medium hover:text-red-700 transition-colors"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))

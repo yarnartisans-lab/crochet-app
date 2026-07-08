@@ -13,7 +13,6 @@ export default function EditPattern() {
   const [step, setStep] = useState(1);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   
   // Form data states
   const [title, setTitle] = useState('');
@@ -24,7 +23,7 @@ export default function EditPattern() {
   const [affiliateLink, setAffiliateLink] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
   
-  // Multi-Image states (Phase 1 Upgrade)
+  // Multi-Image states
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<{file: Blob, preview: string}[]>([]);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -75,7 +74,7 @@ export default function EditPattern() {
     fetchExistingPattern();
   }, [params.id]);
 
-  // Image handling (Multi-image support)
+  // Image handling
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const totalCurrentImages = existingImages.length + newImages.length;
@@ -169,8 +168,8 @@ export default function EditPattern() {
           yarn_weight: yarn,
           affiliate_link: affiliateLink,
           video_link: youtubeLink,
-          image_url: mainImageUrl, // Fallback for grids
-          image_urls: finalUrls,   // New array for carousels
+          image_url: mainImageUrl, 
+          image_urls: finalUrls,   
         })
         .eq('id', params.id);
 
@@ -197,23 +196,6 @@ export default function EditPattern() {
       alert("Error updating pattern. Check console.");
     } finally {
       setIsPublishing(false);
-    }
-  };
-
-  // 3. Handle Deletion
-  const handleDelete = async () => {
-    const isConfirmed = window.confirm("Are you sure you want to completely delete this pattern? This action cannot be undone.");
-    
-    if (isConfirmed) {
-      setIsDeleting(true);
-      const { error } = await supabase.from('patterns').delete().eq('id', params.id);
-      
-      if (!error) {
-        router.push('/dashboard');
-      } else {
-        alert("Error deleting pattern. Please try again.");
-        setIsDeleting(false);
-      }
     }
   };
 
@@ -339,7 +321,7 @@ export default function EditPattern() {
           </div>
         )}
 
-        {/* STEP 3: Monetization & Danger Zone */}
+        {/* STEP 3: Monetization (Danger Zone Removed) */}
         {step === 3 && (
           <div className="max-w-2xl mx-auto space-y-8 animation-fade-in">
             <div className="space-y-6 bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
@@ -353,28 +335,12 @@ export default function EditPattern() {
               </div>
             </div>
             
-            <div className="flex justify-between pt-4 border-b border-gray-200 pb-8">
+            <div className="flex justify-between pt-4 pb-8">
               <button onClick={() => setStep(2)} className="text-sm font-semibold text-gray-500">← Back</button>
               <button onClick={handleUpdate} disabled={isPublishing} className="rounded-md bg-[#D97757] px-10 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#C26243] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 {isPublishing ? 'Saving...' : 'Save Changes 💾'}
               </button>
             </div>
-
-            {/* DANGER ZONE (Delete Pattern) */}
-            <div className="bg-red-50 p-6 rounded-xl border border-red-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8">
-              <div>
-                <h3 className="text-red-800 font-bold">Danger Zone</h3>
-                <p className="text-red-600 text-sm mt-1">Permanently delete this pattern and its data.</p>
-              </div>
-              <button 
-                onClick={handleDelete} 
-                disabled={isDeleting}
-                className="whitespace-nowrap rounded-md bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete Pattern'}
-              </button>
-            </div>
-
           </div>
         )}
 

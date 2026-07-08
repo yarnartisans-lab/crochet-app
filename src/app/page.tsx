@@ -57,13 +57,20 @@ export default function HomePage() {
   const fallbackImage = 'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]">
+    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] scroll-smooth">
       {/* NAVIGATION */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-extrabold tracking-tighter text-[#2D2D2D]">
-            Crpapo
-          </Link>
+          <div className="flex items-center gap-8">
+            <Link href="/" className="text-2xl font-extrabold tracking-tighter text-[#2D2D2D]">
+              Crpapo
+            </Link>
+            {/* NEW: Explore Patterns Link */}
+            <Link href="#explore" className="hidden sm:block text-sm font-semibold text-gray-500 hover:text-[#D97757] transition-colors">
+              Explore Patterns
+            </Link>
+          </div>
+          
           <div className="flex items-center gap-4">
             {user ? (
               <Link href="/dashboard" className="rounded-full bg-[#D97757] px-5 py-2 text-sm font-semibold text-white hover:bg-[#C26243] transition-colors">
@@ -96,7 +103,8 @@ export default function HomePage() {
       </header>
 
       {/* PATTERN GRID */}
-      <main className="max-w-7xl mx-auto px-6 py-16">
+      {/* ADDED: id="explore" to connect with the nav link */}
+      <main id="explore" className="max-w-7xl mx-auto px-6 py-16 scroll-mt-20">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold tracking-tight">Explore Patterns</h2>
         </div>

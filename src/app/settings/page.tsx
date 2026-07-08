@@ -93,6 +93,22 @@ export default function SettingsPage() {
     };
   };
 
+  // Smart URL Formatter
+  const formatSocialLink = (input: string, domain: string) => {
+    if (!input) return '';
+    const clean = input.trim();
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    if (clean.includes(domain)) return `https://${clean}`;
+    return `https://${domain}/${clean.replace(/^@/, '')}`;
+  };
+
+  const formatWebsiteLink = (input: string) => {
+    if (!input) return '';
+    const clean = input.trim();
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    return `https://${clean}`;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -116,6 +132,12 @@ export default function SettingsPage() {
         }
       }
 
+      // Apply the smart formatting before saving to the database
+      const finalInstagram = formatSocialLink(instagram, 'instagram.com');
+      const finalPinterest = formatSocialLink(pinterest, 'pinterest.com');
+      const finalYoutube = formatSocialLink(youtube, 'youtube.com');
+      const finalWebsite = formatWebsiteLink(website);
+
       const { error } = await supabase
         .from('profiles')
         .upsert({ 
@@ -123,14 +145,19 @@ export default function SettingsPage() {
           username: username,
           bio: bio,
           avatar_url: finalAvatarUrl,
-          instagram_url: instagram,
-          pinterest_url: pinterest,
-          youtube_url: youtube,
-          website_url: website,
+          instagram_url: finalInstagram,
+          pinterest_url: finalPinterest,
+          youtube_url: finalYoutube,
+          website_url: finalWebsite,
           updated_at: new Date().toISOString()
         });
         
       if (!error) {
+        // Update local state to show the newly formatted links
+        setInstagram(finalInstagram);
+        setPinterest(finalPinterest);
+        setYoutube(finalYoutube);
+        setWebsite(finalWebsite);
         setMessage({ text: 'Profile updated successfully!', type: 'success' });
       } else {
         setMessage({ text: error.message, type: 'error' });
@@ -144,7 +171,6 @@ export default function SettingsPage() {
     router.push('/');
   };
 
-  // NEW: Secure Delete Account Handler
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm(
       "Are you absolutely sure you want to delete your account? This will permanently erase your profile and all your published patterns. This action cannot be undone."
@@ -248,19 +274,19 @@ export default function SettingsPage() {
             
             <div>
               <label className="block text-sm font-medium mb-2">Pinterest URL</label>
-              <input type="url" value={pinterest} onChange={(e) => setPinterest(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="https://pinterest.com/yourname"/>
+              <input type="text" value={pinterest} onChange={(e) => setPinterest(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="e.g. yourname or https://pinterest.com/yourname"/>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Instagram URL</label>
-              <input type="url" value={instagram} onChange={(e) => setInstagram(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="https://instagram.com/yourname"/>
+              <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="e.g. yourname or https://instagram.com/yourname"/>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">YouTube Channel URL</label>
-              <input type="url" value={youtube} onChange={(e) => setYoutube(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="https://youtube.com/@yourname"/>
+              <input type="text" value={youtube} onChange={(e) => setYoutube(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="e.g. @yourname or https://youtube.com/@yourname"/>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Personal Website or Shop</label>
-              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="https://yoursite.com"/>
+              <input type="text" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" placeholder="e.g. yoursite.com"/>
             </div>
           </div>
 
