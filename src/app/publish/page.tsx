@@ -18,9 +18,13 @@ export default function PublishWizard() {
   const [hookSize, setHookSize] = useState('');
   const [yarnWeight, setYarnWeight] = useState('');
   
-  // NEW: Category and Language States
+  // Category and Language States
   const [category, setCategory] = useState('Garments');
   const [language, setLanguage] = useState('English');
+
+  // NEW: Materials and Abbreviations States
+  const [materials, setMaterials] = useState('');
+  const [abbreviations, setAbbreviations] = useState('');
   
   // State for up to 4 images
   const [images, setImages] = useState<{file: Blob, preview: string}[]>([]);
@@ -127,16 +131,16 @@ export default function PublishWizard() {
     for (let i = 0; i < images.length; i++) {
       const fileName = `${user.id}-${Date.now()}-${i}.webp`;
       const { error: uploadError } = await supabase.storage
-        .from('patterns')
+        .from('pattern_images') // FIXED: Now strictly pointing to the correct bucket
         .upload(fileName, images[i].file, { contentType: 'image/webp' });
 
       if (!uploadError) {
-        const { data } = supabase.storage.from('patterns').getPublicUrl(fileName);
+        const { data } = supabase.storage.from('pattern_images').getPublicUrl(fileName); // FIXED
         finalUrls.push(data.publicUrl);
       }
     }
 
-    // 2. Insert Pattern (Save main image AND array of images)
+    // 2. Insert Pattern 
     const mainImageUrl = finalUrls.length > 0 ? finalUrls[0] : null;
 
     const { data: patternData, error: patternError } = await supabase
@@ -147,11 +151,13 @@ export default function PublishWizard() {
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
-        category, // Newly Added
-        language, // Newly Added
-        image_url: mainImageUrl, // For homepage compatibility
-        image_urls: finalUrls,   // For the new carousel
-        affiliate_link: affiliateLink || null, // Keeping the column name identical to avoid breaking the DB
+        category, 
+        language, 
+        materials, // NEW
+        abbreviations, // NEW
+        image_url: mainImageUrl, 
+        image_urls: finalUrls,   
+        affiliate_link: affiliateLink || null, 
         video_link: videoLink || null,
         is_published: true
       })
@@ -228,8 +234,7 @@ export default function PublishWizard() {
                 <input type="text" value={yarnWeight} onChange={(e) => setYarnWeight(e.target.value)} placeholder="e.g. Worsted / Weight 4" className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]"/>
               </div>
 
-              {/* NEW: Category and Language Selectors */}
-              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6 mt-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Pattern Category</label>
                   <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
@@ -251,6 +256,30 @@ export default function PublishWizard() {
                     <option value="Dutch">Dutch</option>
                     <option value="Portuguese">Portuguese</option>
                   </select>
+                </div>
+              </div>
+
+              {/* NEW: Materials and Abbreviations Fields */}
+              <div className="space-y-4 border-t border-gray-100 pt-6 mt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Materials Needed</label>
+                  <textarea 
+                    value={materials} 
+                    onChange={(e) => setMaterials(e.target.value)} 
+                    placeholder="e.g. 5mm hook, scissors, stitch markers, 2 skeins of yarn..." 
+                    rows={3} 
+                    className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Abbreviations & Stitches</label>
+                  <textarea 
+                    value={abbreviations} 
+                    onChange={(e) => setAbbreviations(e.target.value)} 
+                    placeholder="e.g. sc = single crochet, inc = increase, dec = decrease..." 
+                    rows={3} 
+                    className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-none"
+                  />
                 </div>
               </div>
 
@@ -292,7 +321,6 @@ export default function PublishWizard() {
 
               <div className="pt-4 border-t border-gray-100 space-y-4">
                 <div>
-                  {/* UPDATED: Cleaned up the affiliate terminology */}
                   <label className="block text-sm font-medium mb-2 flex items-center gap-2">
                     Yarn Link <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">Revenue</span>
                   </label>
