@@ -57,7 +57,7 @@ export default function DesignerDashboard() {
     if (!confirmDelete) return;
 
     try {
-      // 1. Delete associated steps first to prevent foreign key constraint errors
+      // 1. Delete associated steps first
       const { error: stepsError } = await supabase
         .from('pattern_steps')
         .delete()
@@ -65,19 +65,25 @@ export default function DesignerDashboard() {
 
       if (stepsError) throw stepsError;
 
-      // 2. Now delete the main pattern
-      const { error: patternError } = await supabase
+      // 2. Now delete the main pattern AND ask Supabase to return the deleted row
+      const { error: patternError, data: deletedPattern } = await supabase
         .from('patterns')
         .delete()
-        .eq('id', patternId);
+        .eq('id', patternId)
+        .select();
 
       if (patternError) throw patternError;
+      
+      // 3. The Smart Check: If data is empty, RLS silently blocked the deletion
+      if (!deletedPattern || deletedPattern.length === 0) {
+        throw new Error("Database blocked the deletion. Please check your Supabase RLS policies.");
+      }
 
-      // Instantly remove the deleted pattern from the UI
+      // If we made it here, it truly deleted. Remove it from the UI instantly.
       setPatterns((prevPatterns) => prevPatterns.filter((p) => p.id !== patternId));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting pattern:', error);
-      alert('Failed to delete pattern. Please try again.');
+      alert(`Failed to delete pattern: ${error.message || 'Unknown error'}`);
     }
   };
 
