@@ -19,6 +19,10 @@ export default function EditPattern() {
   const [difficulty, setDifficulty] = useState('Beginner');
   const [hookSize, setHookSize] = useState('');
   const [yarn, setYarn] = useState('');
+  const [category, setCategory] = useState('Garments');
+  const [language, setLanguage] = useState('English');
+  const [materials, setMaterials] = useState('');
+  const [abbreviations, setAbbreviations] = useState('');
   const [rawText, setRawText] = useState('');
   const [affiliateLink, setAffiliateLink] = useState('');
   const [youtubeLink, setYoutubeLink] = useState('');
@@ -46,6 +50,10 @@ export default function EditPattern() {
         setDifficulty(pattern.difficulty_level || 'Beginner');
         setHookSize(pattern.hook_size || '');
         setYarn(pattern.yarn_weight || '');
+        setCategory(pattern.category || 'Garments');
+        setLanguage(pattern.language || 'English');
+        setMaterials(pattern.materials || '');
+        setAbbreviations(pattern.abbreviations || '');
         setAffiliateLink(pattern.affiliate_link || '');
         setYoutubeLink(pattern.video_link || '');
         
@@ -166,6 +174,10 @@ export default function EditPattern() {
           difficulty_level: difficulty,
           hook_size: hookSize,
           yarn_weight: yarn,
+          category: category,
+          language: language,
+          materials: materials,
+          abbreviations: abbreviations,
           affiliate_link: affiliateLink,
           video_link: youtubeLink,
           image_url: mainImageUrl, 
@@ -286,6 +298,55 @@ export default function EditPattern() {
                 <label className="block text-sm font-medium text-gray-900 mb-2">Yarn Weight & Brand</label>
                 <input type="text" value={yarn} onChange={(e) => setYarn(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]" />
               </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-6 mt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Pattern Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
+                    <option value="Garments">Garments (Sweaters, Tops)</option>
+                    <option value="Accessories">Accessories (Hats, Bags)</option>
+                    <option value="Amigurumi/Plushies">Amigurumi / Plushies</option>
+                    <option value="Home Decor">Home Decor</option>
+                    <option value="Blankets">Blankets</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Language</label>
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757]">
+                    <option value="English">English</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="German">German</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Dutch">Dutch</option>
+                    <option value="Portuguese">Portuguese</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-gray-100 pt-6 mt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Materials Needed</label>
+                  <textarea 
+                    value={materials} 
+                    onChange={(e) => setMaterials(e.target.value)} 
+                    placeholder="e.g. 5mm hook, scissors, stitch markers, 2 skeins of yarn..." 
+                    rows={3} 
+                    className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Abbreviations & Stitches</label>
+                  <textarea 
+                    value={abbreviations} 
+                    onChange={(e) => setAbbreviations(e.target.value)} 
+                    placeholder="e.g. sc = single crochet, inc = increase, dec = decrease..." 
+                    rows={3} 
+                    className="w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-none"
+                  />
+                </div>
+              </div>
+
             </div>
 
             <div className="flex justify-end">
@@ -294,17 +355,18 @@ export default function EditPattern() {
           </div>
         )}
 
-        {/* STEP 2: Instructions */}
+        {/* STEP 2: Instructions (FIXED LAYOUT) */}
         {step === 2 && (
           <div className="space-y-8 animation-fade-in">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[600px]">
-              <div className="flex flex-col">
+            {/* Removed the hardcoded h-[600px] and used min-h-[600px] instead */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[600px]">
+              <div className="flex flex-col h-full">
                 <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Raw Text</label>
-                <textarea value={rawText} onChange={(e) => setRawText(e.target.value)} className="flex-1 w-full rounded-2xl border-0 p-6 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-none font-mono text-sm leading-relaxed" />
+                <textarea value={rawText} onChange={(e) => setRawText(e.target.value)} className="flex-1 w-full min-h-[500px] rounded-2xl border-0 p-6 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#D97757] resize-y font-mono text-sm leading-relaxed" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col h-full">
                 <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider text-[#D97757]">Preview</label>
-                <div className="flex-1 w-full rounded-2xl bg-white border border-gray-100 shadow-sm p-6 overflow-y-auto space-y-3">
+                <div className="flex-1 w-full min-h-[500px] rounded-2xl bg-white border border-gray-100 shadow-sm p-6 overflow-y-auto space-y-3">
                   {parsedRows.map((row, idx) => (
                     <div key={idx} className="p-4 rounded-xl border-2 border-gray-100 bg-white shadow-sm flex items-start gap-4">
                       <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 mt-0.5"></div>
@@ -314,14 +376,15 @@ export default function EditPattern() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-between max-w-2xl mx-auto pt-4">
-              <button onClick={() => setStep(1)} className="text-sm font-semibold text-gray-500">← Back</button>
-              <button onClick={() => setStep(3)} className="rounded-md bg-[#D97757] px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#C26243]">Next: Monetization</button>
+            
+            <div className="flex justify-between max-w-2xl mx-auto pt-8">
+              <button onClick={() => setStep(1)} className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">← Back</button>
+              <button onClick={() => setStep(3)} className="rounded-md bg-[#D97757] px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#C26243] transition-colors">Next: Monetization</button>
             </div>
           </div>
         )}
 
-        {/* STEP 3: Monetization (Danger Zone Removed) */}
+        {/* STEP 3: Monetization */}
         {step === 3 && (
           <div className="max-w-2xl mx-auto space-y-8 animation-fade-in">
             <div className="space-y-6 bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
@@ -336,8 +399,8 @@ export default function EditPattern() {
             </div>
             
             <div className="flex justify-between pt-4 pb-8">
-              <button onClick={() => setStep(2)} className="text-sm font-semibold text-gray-500">← Back</button>
-              <button onClick={handleUpdate} disabled={isPublishing} className="rounded-md bg-[#D97757] px-10 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#C26243] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button onClick={() => setStep(2)} className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">← Back</button>
+              <button onClick={handleUpdate} disabled={isPublishing} className="rounded-md bg-[#D97757] px-10 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#C26243] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {isPublishing ? 'Saving...' : 'Save Changes 💾'}
               </button>
             </div>
