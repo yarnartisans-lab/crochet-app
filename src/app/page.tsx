@@ -65,8 +65,8 @@ export default function HomePage() {
             <Link href="/" className="text-2xl font-extrabold tracking-tighter text-[#2D2D2D]">
               Crpapo
             </Link>
-            {/* UPDATED: Explore Patterns Ghost Button */}
-            <Link href="#explore" className="hidden sm:block text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4 py-2 rounded-full transition-colors">
+            {/* UPDATED: Changed #explore to /explore to route to your new page */}
+            <Link href="/explore" className="hidden sm:block text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4 py-2 rounded-full transition-colors">
               Explore Patterns
             </Link>
           </div>
