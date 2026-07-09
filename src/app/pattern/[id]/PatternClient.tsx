@@ -178,6 +178,29 @@ export default function PatternClient() {
         </aside>
 
         <section className="md:col-span-2">
+          
+          {/* NEW: Materials & Abbreviations Cards */}
+          {(pattern.materials || pattern.abbreviations) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+              {pattern.materials && (
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Materials Needed</h3>
+                  <div className="text-sm text-[#2D2D2D] whitespace-pre-wrap leading-relaxed">
+                    {pattern.materials}
+                  </div>
+                </div>
+              )}
+              {pattern.abbreviations && (
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Abbreviations</h3>
+                  <div className="text-sm text-[#2D2D2D] whitespace-pre-wrap leading-relaxed">
+                    {pattern.abbreviations}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <h2 className="text-2xl font-bold mb-6">Instructions</h2>
           <div className="space-y-3">
             {instructions.length === 0 ? (
