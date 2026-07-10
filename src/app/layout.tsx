@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// UPDATED: Global SEO Metadata for Crpapo
+// Global SEO Metadata for Crpapo
 export const metadata: Metadata = {
   title: "Crpapo | The Interactive Pattern Library",
   description: "The interactive pattern library where crafters never lose their place, and designers share their work beautifully.",
@@ -36,17 +37,50 @@ export default function RootLayout({
           {children}
         </div>
 
-        {/* Global Footer & Affiliate Disclosure */}
-        <footer className="bg-white border-t border-gray-200 py-8 mt-auto">
-          <div className="max-w-7xl mx-auto px-6 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xl font-extrabold tracking-tighter text-[#2D2D2D]">Crpapo</p>
-              <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
-                Crpapo is a platform for crafters and designers. Some patterns contain affiliate links, meaning designers may earn a commission if you make a purchase through those links, at no extra cost to you.
-              </p>
+        {/* Professional Global Footer */}
+        <footer className="bg-white border-t border-gray-200 pt-12 pb-8 mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-8">
+              
+              {/* Brand & Disclosure Column */}
+              <div className="md:col-span-2 space-y-4">
+                <p className="text-2xl font-extrabold tracking-tighter text-[#2D2D2D]">Crpapo</p>
+                <p className="text-sm text-gray-500 max-w-md leading-relaxed">
+                  The interactive pattern library where crafters never lose their place, and designers share their work beautifully.
+                </p>
+                <p className="text-xs text-gray-400 max-w-md leading-relaxed">
+                  *Some patterns contain affiliate links. Designers may earn a commission if you make a purchase through those links, at no extra cost to you.
+                </p>
+              </div>
+              
+              {/* Platform Navigation */}
+              <div>
+                <h3 className="font-bold text-[#2D2D2D] mb-4">Platform</h3>
+                <ul className="space-y-3 text-sm text-gray-500 font-medium">
+                  <li><Link href="/explore" className="hover:text-[#D97757] transition-colors">Explore Patterns</Link></li>
+                  <li><Link href="/dashboard" className="hover:text-[#D97757] transition-colors">Creator Dashboard</Link></li>
+                  <li><Link href="/login" className="hover:text-[#D97757] transition-colors">Log in / Sign up</Link></li>
+                </ul>
+              </div>
+
+              {/* Legal & Support */}
+              <div>
+                <h3 className="font-bold text-[#2D2D2D] mb-4">Legal</h3>
+                <ul className="space-y-3 text-sm text-gray-500 font-medium">
+                  {/* You can replace '#' with actual paths like '/terms' once you build those pages */}
+                  <li><Link href="#" className="hover:text-[#D97757] transition-colors">Terms of Service</Link></li>
+                  <li><Link href="#" className="hover:text-[#D97757] transition-colors">Privacy Policy</Link></li>
+                  <li><Link href="#" className="hover:text-[#D97757] transition-colors">Contact Us</Link></li>
+                </ul>
+              </div>
+              
             </div>
-            <div className="text-xs font-semibold text-gray-400 flex gap-4">
-              <span>© {new Date().getFullYear()} Crpapo. All rights reserved.</span>
+
+            {/* Copyright Bar */}
+            <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+              <span className="text-xs font-semibold text-gray-400">
+                © {new Date().getFullYear()} Crpapo. All rights reserved.
+              </span>
             </div>
           </div>
         </footer>

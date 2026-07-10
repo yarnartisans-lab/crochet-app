@@ -8,20 +8,24 @@ import { createClient } from '@/utils/supabase/client';
 function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
+  // 1. Get all current filters from the URL
   const query = searchParams.get('q') || '';
+  const currentCategory = searchParams.get('category') || '';
+  const currentDifficulty = searchParams.get('difficulty') || '';
+  const currentLanguage = searchParams.get('language') || '';
   
   const supabase = createClient();
   const [patterns, setPatterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // NEW: State for the local search bar
   const [searchInput, setSearchInput] = useState(query);
 
-  // Keep the input box synced with the URL
   useEffect(() => {
     setSearchInput(query);
   }, [query]);
 
+  // 2. Fetch Data based on ALL active filters
   useEffect(() => {
     async function fetchSearchData() {
       setLoading(true);
@@ -30,10 +34,21 @@ function ExploreContent() {
         .from('patterns')
         .select('*')
         .eq('is_published', true)
+        .order('views', { ascending: false })
         .order('created_at', { ascending: false });
 
+      // Apply active filters to the query
       if (query) {
         dbQuery = dbQuery.ilike('title', `%${query}%`);
+      }
+      if (currentCategory) {
+        dbQuery = dbQuery.eq('category', currentCategory);
+      }
+      if (currentDifficulty) {
+        dbQuery = dbQuery.eq('difficulty_level', currentDifficulty);
+      }
+      if (currentLanguage) {
+        dbQuery = dbQuery.eq('language', currentLanguage);
       }
 
       const { data } = await dbQuery;
@@ -43,16 +58,29 @@ function ExploreContent() {
     }
 
     fetchSearchData();
-  }, [query]);
+  }, [query, currentCategory, currentDifficulty, currentLanguage]);
 
-  // NEW: Handle pressing Enter in the search box
+  // 3. Centralized function to update the URL when any filter changes
+  const updateFilters = (newSearch?: string, newCategory?: string, newDifficulty?: string, newLanguage?: string) => {
+    const params = new URLSearchParams();
+    
+    // Use the newly passed value, or fallback to the current state, but ignore if empty
+    const finalSearch = newSearch !== undefined ? newSearch : searchInput;
+    const finalCategory = newCategory !== undefined ? newCategory : currentCategory;
+    const finalDifficulty = newDifficulty !== undefined ? newDifficulty : currentDifficulty;
+    const finalLanguage = newLanguage !== undefined ? newLanguage : currentLanguage;
+
+    if (finalSearch.trim()) params.set('q', finalSearch.trim());
+    if (finalCategory) params.set('category', finalCategory);
+    if (finalDifficulty) params.set('difficulty', finalDifficulty);
+    if (finalLanguage) params.set('language', finalLanguage);
+
+    router.push(`/explore?${params.toString()}`);
+  };
+
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      if (searchInput.trim() !== '') {
-        router.push(`/explore?q=${encodeURIComponent(searchInput)}`);
-      } else {
-        router.push(`/explore`); // Clears the search if empty
-      }
+      updateFilters(searchInput);
     }
   };
 
@@ -60,18 +88,17 @@ function ExploreContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] pb-24">
-      <div className="bg-white border-b border-gray-200 px-6 py-8">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]">← Back to Home</Link>
             <span className="font-extrabold tracking-tighter text-xl">Crpapo</span>
           </div>
           
-          <h1 className="text-3xl font-extrabold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             {query ? `Search results for "${query}"` : 'Explore All Patterns'}
           </h1>
           
-          {/* NEW: The integrated search bar */}
           <div className="relative max-w-lg mt-2">
             <input 
               type="text" 
@@ -86,33 +113,91 @@ function ExploreContent() {
             </svg>
           </div>
           
-          <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-            <button className="px-4 py-1.5 whitespace-nowrap rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors">Beginner Friendly</button>
-            <button className="px-4 py-1.5 whitespace-nowrap rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors">Chunky Yarn</button>
-            <button className="px-4 py-1.5 whitespace-nowrap rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors">Amigurumi</button>
+          {/* FUNCTIONAL DROPDOWN FILTERS */}
+          <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+            
+            <select 
+              value={currentCategory} 
+              onChange={(e) => updateFilters(undefined, e.target.value, undefined, undefined)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+            >
+              <option value="">All Categories</option>
+              <option value="Garments">Garments</option>
+              <option value="Accessories">Accessories</option>
+              <option value="Amigurumi / Plushies">Amigurumi / Plushies</option>
+              <option value="Home Decor">Home Decor</option>
+              <option value="Blankets">Blankets</option>
+            </select>
+
+            <select 
+              value={currentDifficulty} 
+              onChange={(e) => updateFilters(undefined, undefined, e.target.value, undefined)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+            >
+              <option value="">All Difficulties</option>
+              <option value="Beginner">Beginner</option>
+              <option value="Easy">Easy</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+
+            <select 
+              value={currentLanguage} 
+              onChange={(e) => updateFilters(undefined, undefined, undefined, e.target.value)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+            >
+              <option value="">All Languages</option>
+              <option value="English">English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="German">German</option>
+              <option value="Italian">Italian</option>
+              <option value="Dutch">Dutch</option>
+              <option value="Portuguese">Portuguese</option>
+            </select>
+
+            {/* Clear Filters Button (Only shows if at least one filter is active) */}
+            {(currentCategory || currentDifficulty || currentLanguage) && (
+              <button 
+                onClick={() => {
+                  setSearchInput('');
+                  router.push('/explore');
+                }}
+                className="px-4 py-2 whitespace-nowrap rounded-full bg-gray-100 text-gray-600 text-sm font-bold hover:bg-gray-200 transition-colors"
+              >
+                Clear All ✕
+              </button>
+            )}
+
           </div>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 pt-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10">
         {loading ? (
-          <div className="text-center py-20 text-gray-500 font-medium animate-pulse">Searching the library...</div>
+          <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
+             {[1, 2, 3, 4, 5, 6].map((skeleton) => (
+              <div key={skeleton} className="break-inside-avoid bg-gray-100 rounded-2xl h-48 sm:h-80 animate-pulse border border-gray-200"></div>
+            ))}
+          </div>
         ) : patterns.length === 0 ? (
           <div className="text-center py-20 text-gray-500 font-medium border-2 border-dashed border-gray-200 rounded-2xl">
-            We couldn't find any patterns matching "{query}". Try another term!
+            We couldn't find any patterns matching your filters. Try clearing them to see more!
           </div>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
+          <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
             {patterns.map((pattern) => {
-              const imageUrl = pattern.image_url || fallbackImage;
+              const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
               return (
                 <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
                   <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
                     <img src={imageUrl} alt={pattern.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                      <div className="text-white">
-                        <p className="font-bold text-lg leading-tight mb-1">{pattern.title}</p>
-                        <p className="text-sm opacity-90 font-medium">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
+                      <div className="text-white w-full">
+                        <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -126,7 +211,6 @@ function ExploreContent() {
   );
 }
 
-// Next.js requires useSearchParams to be wrapped in a Suspense boundary
 export default function ExplorePage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">Loading...</div>}>
