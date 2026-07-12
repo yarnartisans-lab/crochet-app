@@ -16,6 +16,7 @@ export default function PatternClient() {
   const [designerName, setDesignerName] = useState<string>('Anonymous');
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isReported, setIsReported] = useState(false);
 
   useEffect(() => {
     async function fetchPatternData() {
@@ -78,10 +79,17 @@ export default function PatternClient() {
     }
   };
 
-  const handleOutboundClick = async (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
-    e.preventDefault(); 
-    await supabase.rpc('increment_clicks', { pattern_id: params.id });
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const handleOutboundClick = async () => {
+    // Tracks the click silently in the background while the browser handles opening the link natively
+    if (params.id) {
+      await supabase.rpc('increment_clicks', { pattern_id: params.id });
+    }
+  };
+
+  const handleReport = async () => {
+    if (!params.id || isReported) return;
+    setIsReported(true);
+    await supabase.rpc('increment_reports', { pattern_id: params.id });
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500 font-medium bg-[#FAFAF9]">Loading pattern...</div>;
@@ -95,7 +103,7 @@ export default function PatternClient() {
     : [pattern.image_url || fallbackImage];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] pb-24">
+    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]">
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]">← Back to Patterns</Link>
         <div className="flex items-center gap-4 w-1/3">
@@ -107,7 +115,7 @@ export default function PatternClient() {
         <button className="text-sm font-semibold text-gray-400 cursor-default">Auto-Saved</button>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 pt-10 grid grid-cols-1 md:grid-cols-3 gap-12">
+      <main className="max-w-5xl mx-auto px-6 pt-10 grid grid-cols-1 md:grid-cols-3 gap-12 pb-16">
         <aside className="md:col-span-1 space-y-6">
           <div className="space-y-3">
             <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
@@ -151,9 +159,12 @@ export default function PatternClient() {
           </div>
 
           <div className="space-y-3 pt-2">
+            {/* SEO SHIELD: Added target="_blank" and rel="nofollow ugc noopener noreferrer" directly to the HTML tag */}
             <a 
               href={pattern.affiliate_link || '#'} 
-              onClick={(e) => handleOutboundClick(e, pattern.affiliate_link)}
+              target="_blank"
+              rel="nofollow ugc noopener noreferrer"
+              onClick={handleOutboundClick}
               className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-bold transition-all shadow-sm
                 ${pattern.affiliate_link ? 'bg-[#146b53] text-white hover:bg-[#0f5441] hover:shadow-md' : 'hidden'}`}
             >
@@ -165,7 +176,9 @@ export default function PatternClient() {
 
             <a 
               href={pattern.video_link || '#'} 
-              onClick={(e) => handleOutboundClick(e, pattern.video_link)}
+              target="_blank"
+              rel="nofollow ugc noopener noreferrer"
+              onClick={handleOutboundClick}
               className={`w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-bold transition-all border-2
                 ${pattern.video_link ? 'border-[#ff0000] text-[#ff0000] hover:bg-[#ff0000] hover:text-white' : 'hidden'}`}
             >
@@ -175,11 +188,23 @@ export default function PatternClient() {
               Watch Video Tutorial
             </a>
           </div>
+
+          {/* REPORT BUTTON */}
+          <div className="pt-4 border-t border-gray-200">
+            <button 
+              onClick={handleReport}
+              disabled={isReported}
+              className={`text-xs font-semibold flex items-center justify-center gap-1.5 w-full transition-colors ${isReported ? 'text-gray-300 cursor-default' : 'text-gray-400 hover:text-red-500'}`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+              </svg>
+              {isReported ? 'Report Sent to Admin' : 'Report this Pattern'}
+            </button>
+          </div>
         </aside>
 
         <section className="md:col-span-2">
-          
-          {/* NEW: Materials & Abbreviations Cards */}
           {(pattern.materials || pattern.abbreviations) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
               {pattern.materials && (
