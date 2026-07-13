@@ -80,7 +80,6 @@ export default function PatternClient() {
   };
 
   const handleOutboundClick = async () => {
-    // Tracks the click silently in the background while the browser handles opening the link natively
     if (params.id) {
       await supabase.rpc('increment_clicks', { pattern_id: params.id });
     }
@@ -103,7 +102,11 @@ export default function PatternClient() {
     : [pattern.image_url || fallbackImage];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]">
+    <div 
+      className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]"
+      // 1. INVISIBLE SHIELD: Disables right-clicking (prevents "Save Image As")
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]">← Back to Patterns</Link>
         <div className="flex items-center gap-4 w-1/3">
@@ -119,7 +122,7 @@ export default function PatternClient() {
         <aside className="md:col-span-1 space-y-6">
           <div className="space-y-3">
             <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
-              <img src={images[currentImageIndex]} alt={pattern.title} className="w-full h-full object-cover transition-opacity duration-300" />
+              <img src={images[currentImageIndex]} alt={pattern.title} className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none" />
             </div>
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -129,7 +132,7 @@ export default function PatternClient() {
                     onClick={() => setCurrentImageIndex(idx)}
                     className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx ? 'border-[#D97757] ring-2 ring-[#D97757]/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
                   >
-                    <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover pointer-events-none" />
                   </button>
                 ))}
               </div>
@@ -159,7 +162,6 @@ export default function PatternClient() {
           </div>
 
           <div className="space-y-3 pt-2">
-            {/* SEO SHIELD: Added target="_blank" and rel="nofollow ugc noopener noreferrer" directly to the HTML tag */}
             <a 
               href={pattern.affiliate_link || '#'} 
               target="_blank"
@@ -189,7 +191,6 @@ export default function PatternClient() {
             </a>
           </div>
 
-          {/* REPORT BUTTON */}
           <div className="pt-4 border-t border-gray-200">
             <button 
               onClick={handleReport}
@@ -204,7 +205,8 @@ export default function PatternClient() {
           </div>
         </aside>
 
-        <section className="md:col-span-2">
+        {/* 2. INVISIBLE SHIELD: select-none disables text highlighting */}
+        <section className="md:col-span-2 select-none">
           {(pattern.materials || pattern.abbreviations) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
               {pattern.materials && (
