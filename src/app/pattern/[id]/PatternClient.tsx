@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 
 export default function PatternClient() {
@@ -121,8 +122,15 @@ export default function PatternClient() {
       <main className="max-w-5xl mx-auto px-6 pt-10 grid grid-cols-1 md:grid-cols-3 gap-12 pb-16">
         <aside className="md:col-span-1 space-y-6">
           <div className="space-y-3">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
-              <img src={images[currentImageIndex]} alt={pattern.title} className="w-full h-full object-cover transition-opacity duration-300 pointer-events-none" />
+            {/* Added 'relative' to this parent div for Next.js Image fill to work */}
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
+              <Image 
+                src={images[currentImageIndex]} 
+                alt={pattern.title} 
+                fill 
+                className="object-cover transition-opacity duration-300 pointer-events-none" 
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
             </div>
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -132,7 +140,13 @@ export default function PatternClient() {
                     onClick={() => setCurrentImageIndex(idx)}
                     className={`relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${currentImageIndex === idx ? 'border-[#D97757] ring-2 ring-[#D97757]/20 opacity-100' : 'border-transparent opacity-60 hover:opacity-100'}`}
                   >
-                    <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                    <Image 
+                      src={img} 
+                      alt={`Thumbnail ${idx + 1}`} 
+                      fill 
+                      className="object-cover pointer-events-none" 
+                      sizes="64px"
+                    />
                   </button>
                 ))}
               </div>

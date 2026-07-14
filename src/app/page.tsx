@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 
 export default function HomePage() {
@@ -15,7 +16,7 @@ export default function HomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      // UPDATED: Now sorting by highest views first, falling back to newest if views are tied
+      // Sorting by highest views first, falling back to newest if views are tied
       const { data: publishedPatterns } = await supabase
         .from('patterns')
         .select('*')
@@ -85,8 +86,8 @@ export default function HomePage() {
         </div>
       </nav>
 
-      <header className="bg-white border-b border-gray-100 py-16 sm:py-20 px-4 sm:px-6 text-center">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <header className="bg-white border-b border-gray-100 py-8 sm:py-12 px-4 sm:px-6 text-center">
+        <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#2D2D2D] leading-[1.15]">
             Never lose your place in a pattern again.
           </h1>
@@ -96,8 +97,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main id="explore" className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 scroll-mt-20">
-        <div className="flex items-center justify-between mb-8">
+      <main id="explore" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-16 sm:pt-10 sm:pb-24 scroll-mt-20">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Explore Popular Patterns</h2>
         </div>
 
@@ -119,7 +120,14 @@ export default function HomePage() {
               return (
                 <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
                   <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                    <img src={imageUrl} alt={pattern.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    {/* OPTIMIZED: Replaced <img> with Next.js <Image> component */}
+                    <Image 
+                      src={imageUrl} 
+                      alt={pattern.title} 
+                      width={600}
+                      height={800}
+                      className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
                       <div className="text-white w-full">
                         <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
