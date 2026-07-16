@@ -16,13 +16,14 @@ export default function HomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      // Sorting by highest views first, falling back to newest if views are tied
+      // LIMIT ADDED: Sorting by highest views first, but strictly limited to 12 patterns for speed
       const { data: publishedPatterns } = await supabase
         .from('patterns')
         .select('*')
         .eq('is_published', true)
         .order('views', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(12);
 
       if (publishedPatterns) {
         const designerIds = [...new Set(publishedPatterns.map(p => p.designer_id))];
@@ -113,37 +114,45 @@ export default function HomePage() {
             <p className="text-gray-500 font-medium">No patterns published yet.</p>
           </div>
         ) : (
-          <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
-            {patterns.map((pattern) => {
-              const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
-              
-              return (
-                <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
-                  <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                    {/* OPTIMIZED: Replaced <img> with Next.js <Image> component */}
-                    <Image 
-                      src={imageUrl} 
-                      alt={pattern.title} 
-                      width={600}
-                      height={800}
-                      className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
-                      <div className="text-white w-full">
-                        <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">By @{pattern.designer_name}</p>
-                          <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/20 rounded-md backdrop-blur-sm whitespace-nowrap">
-                            {pattern.difficulty_level || 'Varies'}
-                          </span>
+          <>
+            <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
+              {patterns.map((pattern) => {
+                const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
+                
+                return (
+                  <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
+                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                      <Image 
+                        src={imageUrl} 
+                        alt={pattern.title} 
+                        width={600}
+                        height={800}
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
+                        <div className="text-white w-full">
+                          <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">By @{pattern.designer_name}</p>
+                            <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/20 rounded-md backdrop-blur-sm whitespace-nowrap">
+                              {pattern.difficulty_level || 'Varies'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+            
+            {/* VIEW ALL BUTTON */}
+            <div className="mt-12 text-center">
+              <Link href="/explore" className="inline-block bg-white border border-gray-200 text-[#2D2D2D] font-bold py-3 px-8 rounded-full hover:border-[#D97757] hover:text-[#D97757] transition-colors shadow-sm">
+                View All Patterns
+              </Link>
+            </div>
+          </>
         )}
       </main>
     </div>

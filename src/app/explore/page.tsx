@@ -3,7 +3,11 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
+
+// INCREASED TO 24 PATTERNS PER LOAD
+const PAGE_SIZE = 24;
 
 function ExploreContent() {
   const searchParams = useSearchParams();
@@ -19,52 +23,78 @@ function ExploreContent() {
   const [patterns, setPatterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Pagination States
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
   const [searchInput, setSearchInput] = useState(query);
 
   useEffect(() => {
     setSearchInput(query);
   }, [query]);
 
-  // 2. Fetch Data based on ALL active filters
+  // Helper to build the base query with active filters
+  const buildQuery = () => {
+    let dbQuery = supabase
+      .from('patterns')
+      .select('*')
+      .eq('is_published', true)
+      .order('views', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (query) dbQuery = dbQuery.ilike('title', `%${query}%`);
+    if (currentCategory) dbQuery = dbQuery.eq('category', currentCategory);
+    if (currentDifficulty) dbQuery = dbQuery.eq('difficulty_level', currentDifficulty);
+    if (currentLanguage) dbQuery = dbQuery.eq('language', currentLanguage);
+
+    return dbQuery;
+  };
+
+  // 2. Fetch Initial Data based on ALL active filters
   useEffect(() => {
     async function fetchSearchData() {
       setLoading(true);
+      setPage(0); // Reset pagination on new filters
       
-      let dbQuery = supabase
-        .from('patterns')
-        .select('*')
-        .eq('is_published', true)
-        .order('views', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      // Apply active filters to the query
-      if (query) {
-        dbQuery = dbQuery.ilike('title', `%${query}%`);
-      }
-      if (currentCategory) {
-        dbQuery = dbQuery.eq('category', currentCategory);
-      }
-      if (currentDifficulty) {
-        dbQuery = dbQuery.eq('difficulty_level', currentDifficulty);
-      }
-      if (currentLanguage) {
-        dbQuery = dbQuery.eq('language', currentLanguage);
-      }
-
+      const dbQuery = buildQuery().range(0, PAGE_SIZE - 1);
       const { data } = await dbQuery;
       
-      if (data) setPatterns(data);
+      if (data) {
+        setPatterns(data);
+        setHasMore(data.length === PAGE_SIZE);
+      } else {
+        setPatterns([]);
+        setHasMore(false);
+      }
       setLoading(false);
     }
 
     fetchSearchData();
   }, [query, currentCategory, currentDifficulty, currentLanguage]);
 
-  // 3. Centralized function to update the URL when any filter changes
+  // 3. Load More Functionality
+  const loadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    
+    const nextPage = page + 1;
+    const dbQuery = buildQuery().range(nextPage * PAGE_SIZE, (nextPage + 1) * PAGE_SIZE - 1);
+    
+    const { data } = await dbQuery;
+
+    if (data) {
+      setPatterns((prev) => [...prev, ...data]);
+      setHasMore(data.length === PAGE_SIZE);
+      setPage(nextPage);
+    }
+    setLoadingMore(false);
+  };
+
+  // Centralized function to update the URL when any filter changes
   const updateFilters = (newSearch?: string, newCategory?: string, newDifficulty?: string, newLanguage?: string) => {
     const params = new URLSearchParams();
     
-    // Use the newly passed value, or fallback to the current state, but ignore if empty
     const finalSearch = newSearch !== undefined ? newSearch : searchInput;
     const finalCategory = newCategory !== undefined ? newCategory : currentCategory;
     const finalDifficulty = newDifficulty !== undefined ? newDifficulty : currentDifficulty;
@@ -156,7 +186,7 @@ function ExploreContent() {
               <option value="Portuguese">Portuguese</option>
             </select>
 
-            {/* Clear Filters Button (Only shows if at least one filter is active) */}
+            {/* Clear Filters Button */}
             {(currentCategory || currentDifficulty || currentLanguage) && (
               <button 
                 onClick={() => {
@@ -185,26 +215,50 @@ function ExploreContent() {
             We couldn't find any patterns matching your filters. Try clearing them to see more!
           </div>
         ) : (
-          <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
-            {patterns.map((pattern) => {
-              const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
-              return (
-                <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
-                  <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                    <img src={imageUrl} alt={pattern.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
-                      <div className="text-white w-full">
-                        <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+          <>
+            <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
+              {patterns.map((pattern) => {
+                const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
+                return (
+                  <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
+                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                      {/* OPTIMIZED: Replaced <img> with Next.js <Image> component */}
+                      <Image 
+                        src={imageUrl} 
+                        alt={pattern.title} 
+                        width={600} 
+                        height={800} 
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
+                        <div className="text-white w-full">
+                          <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* LOAD MORE BUTTON */}
+            {hasMore && (
+              <div className="mt-12 text-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className={`inline-block bg-white border border-gray-200 text-[#2D2D2D] font-bold py-3 px-8 rounded-full hover:border-[#D97757] hover:text-[#D97757] transition-colors shadow-sm ${
+                    loadingMore ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {loadingMore ? 'Loading...' : 'Load More Patterns'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
