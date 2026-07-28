@@ -119,12 +119,17 @@ export default function HomePage() {
               {patterns.map((pattern) => {
                 const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
                 
+                // 1. DYNAMIC IMAGE SEO FOR CARDS
+                const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
+                const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
+                const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
+                
                 return (
-                  <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
+                  <Link key={pattern.id} href={`/pattern/${pattern.slug}`} className="group block break-inside-avoid">
                     <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
                       <Image 
                         src={imageUrl} 
-                        alt={pattern.title} 
+                        alt={seoAltText} 
                         width={600}
                         height={800}
                         className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
@@ -146,7 +151,6 @@ export default function HomePage() {
               })}
             </div>
             
-            {/* VIEW ALL BUTTON */}
             <div className="mt-12 text-center">
               <Link href="/explore" className="inline-block bg-white border border-gray-200 text-[#2D2D2D] font-bold py-3 px-8 rounded-full hover:border-[#D97757] hover:text-[#D97757] transition-colors shadow-sm">
                 View All Patterns

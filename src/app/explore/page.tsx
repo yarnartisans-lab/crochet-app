@@ -219,13 +219,18 @@ function ExploreContent() {
             <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
               {patterns.map((pattern) => {
                 const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
+                
+                // --- DYNAMIC IMAGE SEO ---
+                const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
+                const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
+                const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
+                
                 return (
-                  <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
+                  <Link key={pattern.id} href={`/pattern/${pattern.slug}`} className="group block break-inside-avoid">
                     <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                      {/* OPTIMIZED: Replaced <img> with Next.js <Image> component */}
                       <Image 
                         src={imageUrl} 
-                        alt={pattern.title} 
+                        alt={seoAltText} // DYNAMIC ALT TEXT INJECTED HERE
                         width={600} 
                         height={800} 
                         className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
