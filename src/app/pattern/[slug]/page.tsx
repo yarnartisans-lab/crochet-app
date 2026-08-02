@@ -2,6 +2,9 @@ import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import PatternClient from './PatternClient';
 
+// BYPASS NEXT.JS CACHE: Forces the server to fetch fresh SEO data for Google
+export const dynamic = 'force-dynamic';
+
 // Using standard Supabase client for Server-Side fetching
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
