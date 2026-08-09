@@ -188,7 +188,8 @@ export default function DesignerDashboard() {
                       </td>
                       <td className="px-6 py-4 text-right space-x-4">
                         <Link href={`/edit/${pattern.id}`} className="text-gray-500 font-medium hover:text-gray-900">Edit</Link>
-                        <Link href={`/pattern/${pattern.id}`} className="text-[#D97757] font-medium hover:underline">View</Link>
+                        {/* NEW: Pointing the view link to the slug with an ID fallback */}
+                        <Link href={`/pattern/${pattern.slug || pattern.id}`} className="text-[#D97757] font-medium hover:underline">View</Link>
                         <button 
                           onClick={() => handleDelete(pattern.id)} 
                           className="text-red-500 font-medium hover:text-red-700 transition-colors"

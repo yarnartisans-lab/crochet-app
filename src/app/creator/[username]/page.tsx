@@ -96,7 +96,7 @@ export default function CreatorProfile() {
               <p className="text-[#2D2D2D] leading-relaxed max-w-xl">{profile.bio}</p>
             )}
 
-            {/* NEW: Social Links Display */}
+            {/* Social Links Display */}
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {profile.website_url && (
                 <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#D97757] hover:text-[#C26243] bg-[#D97757]/10 px-3 py-1.5 rounded-full transition-colors">
@@ -150,7 +150,8 @@ export default function CreatorProfile() {
             {patterns.map((pattern) => {
               const imageUrl = pattern.image_url || fallbackImage;
               return (
-                <Link key={pattern.id} href={`/pattern/${pattern.id}`} className="group block break-inside-avoid">
+                // FIXED: Added the pattern.id fallback here
+                <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
                   <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
                     <img src={imageUrl} alt={pattern.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">

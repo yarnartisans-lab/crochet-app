@@ -226,7 +226,8 @@ function ExploreContent() {
                 const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
                 
                 return (
-                  <Link key={pattern.id} href={`/pattern/${pattern.slug}`} className="group block break-inside-avoid">
+                  // FIXED: Added the pattern.id fallback here
+                  <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
                     <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
                       <Image 
                         src={imageUrl} 
