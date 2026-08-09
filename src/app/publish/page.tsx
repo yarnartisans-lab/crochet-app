@@ -125,11 +125,21 @@ export default function PublishWizard() {
       return;
     }
 
+    // 1. Generate SEO-friendly slug FIRST (so we can use it for image names)
+    const generatedSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-') // Replaces spaces and special chars with hyphens
+      .replace(/(^-|-$)+/g, '');   // Removes leading/trailing hyphens
+
     let finalUrls: string[] = [];
 
-    // 1. Upload all images
+    // 2. Upload all images with SEO-OPTIMIZED FILE NAMES
     for (let i = 0; i < images.length; i++) {
-      const fileName = `${user.id}-${Date.now()}-${i}.webp`;
+      // Creates names like: no-sew-starfish-1-8492.webp
+      // Includes a tiny timestamp slice at the end just to prevent accidental overwrites
+      const uniqueSuffix = Date.now().toString().slice(-4);
+      const fileName = `${generatedSlug}-${i + 1}-${uniqueSuffix}.webp`; 
+      
       const { error: uploadError } = await supabase.storage
         .from('pattern_images')
         .upload(fileName, images[i].file, { contentType: 'image/webp' });
@@ -140,12 +150,6 @@ export default function PublishWizard() {
       }
     }
 
-    // 2. Generate SEO-friendly slug
-    const generatedSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // Replaces spaces and special chars with hyphens
-      .replace(/(^-|-$)+/g, '');   // Removes leading/trailing hyphens
-
     // 3. Insert Pattern 
     const mainImageUrl = finalUrls.length > 0 ? finalUrls[0] : null;
 
@@ -154,7 +158,7 @@ export default function PublishWizard() {
       .insert({
         designer_id: user.id,
         title,
-        slug: generatedSlug, // NEW: Save the slug to the database
+        slug: generatedSlug, 
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
@@ -191,7 +195,7 @@ export default function PublishWizard() {
       await supabase.from('pattern_steps').insert(stepsToInsert);
     }
 
-    // NEW: Redirect to the SEO slug instead of the raw ID
+    // Redirect to the SEO slug instead of the raw ID
     router.push(`/pattern/${patternData.slug}`);
   };
 
