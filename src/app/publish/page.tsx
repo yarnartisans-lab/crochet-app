@@ -22,7 +22,7 @@ export default function PublishWizard() {
   const [category, setCategory] = useState('Garments');
   const [language, setLanguage] = useState('English');
 
-  // NEW: Materials and Abbreviations States
+  // Materials and Abbreviations States
   const [materials, setMaterials] = useState('');
   const [abbreviations, setAbbreviations] = useState('');
   
@@ -131,16 +131,22 @@ export default function PublishWizard() {
     for (let i = 0; i < images.length; i++) {
       const fileName = `${user.id}-${Date.now()}-${i}.webp`;
       const { error: uploadError } = await supabase.storage
-        .from('pattern_images') // FIXED: Now strictly pointing to the correct bucket
+        .from('pattern_images')
         .upload(fileName, images[i].file, { contentType: 'image/webp' });
 
       if (!uploadError) {
-        const { data } = supabase.storage.from('pattern_images').getPublicUrl(fileName); // FIXED
+        const { data } = supabase.storage.from('pattern_images').getPublicUrl(fileName);
         finalUrls.push(data.publicUrl);
       }
     }
 
-    // 2. Insert Pattern 
+    // 2. Generate SEO-friendly slug
+    const generatedSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-') // Replaces spaces and special chars with hyphens
+      .replace(/(^-|-$)+/g, '');   // Removes leading/trailing hyphens
+
+    // 3. Insert Pattern 
     const mainImageUrl = finalUrls.length > 0 ? finalUrls[0] : null;
 
     const { data: patternData, error: patternError } = await supabase
@@ -148,13 +154,14 @@ export default function PublishWizard() {
       .insert({
         designer_id: user.id,
         title,
+        slug: generatedSlug, // NEW: Save the slug to the database
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
         category, 
         language, 
-        materials, // NEW
-        abbreviations, // NEW
+        materials, 
+        abbreviations, 
         image_url: mainImageUrl, 
         image_urls: finalUrls,   
         affiliate_link: affiliateLink || null, 
@@ -171,7 +178,7 @@ export default function PublishWizard() {
       return;
     }
 
-    // 3. Insert Steps
+    // 4. Insert Steps
     const stepsToInsert = instructions
       .filter(step => step.instruction.trim() !== '')
       .map(step => ({
@@ -184,7 +191,8 @@ export default function PublishWizard() {
       await supabase.from('pattern_steps').insert(stepsToInsert);
     }
 
-    router.push(`/pattern/${patternData.id}`);
+    // NEW: Redirect to the SEO slug instead of the raw ID
+    router.push(`/pattern/${patternData.slug}`);
   };
 
   return (
@@ -259,7 +267,6 @@ export default function PublishWizard() {
                 </div>
               </div>
 
-              {/* NEW: Materials and Abbreviations Fields */}
               <div className="space-y-4 border-t border-gray-100 pt-6 mt-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">Materials Needed</label>

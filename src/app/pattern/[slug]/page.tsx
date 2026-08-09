@@ -10,13 +10,17 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Helper check to verify if a string is a standard Supabase UUID
+const isUuid = (str: string) => 
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 // 1. PROGRAMMATIC SEO: Generate dynamic titles and descriptions
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const { data: pattern } = await supabase
-    .from('patterns')
-    .select('*')
-    .eq('slug', params.slug)
-    .single();
+  const query = isUuid(params.slug) 
+    ? supabase.from('patterns').select('*').eq('id', params.slug).single()
+    : supabase.from('patterns').select('*').eq('slug', params.slug).single();
+
+  const { data: pattern } = await query;
 
   if (!pattern) {
     return { title: 'Pattern Not Found | Crpapo' };
@@ -37,7 +41,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     
     // THE SEO SHIELD: Tells Google the exact, clean URL to index
     alternates: {
-      canonical: `https://crpapo.com/pattern/${params.slug}`,
+      canonical: `https://crpapo.com/pattern/${pattern.slug || params.slug}`,
     },
     
     openGraph: {
@@ -49,12 +53,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function PatternPage({ params }: { params: { slug: string } }) {
-  // Fetch data specifically for the AI Schema using the SLUG
-  const { data: pattern } = await supabase
-    .from('patterns')
-    .select('*')
-    .eq('slug', params.slug)
-    .single();
+  // Fetch data specifically for the AI Schema using the SLUG or ID
+  const query = isUuid(params.slug) 
+    ? supabase.from('patterns').select('*').eq('id', params.slug).single()
+    : supabase.from('patterns').select('*').eq('slug', params.slug).single();
+
+  const { data: pattern } = await query;
 
   let schemasCode = null;
 
@@ -82,7 +86,7 @@ export default async function PatternPage({ params }: { params: { slug: string }
       "@type": "ListItem",
       "position": currentPosition,
       "name": pattern.title,
-      "item": `https://crpapo.com/pattern/${params.slug}`
+      "item": `https://crpapo.com/pattern/${pattern.slug || params.slug}`
     });
 
     schemas.push({

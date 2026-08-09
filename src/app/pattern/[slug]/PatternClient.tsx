@@ -17,7 +17,7 @@ export default function PatternClient() {
   const [completedRows, setCompletedRows] = useState<number[]>([]);
   const [designerName, setDesignerName] = useState<string>('Anonymous');
   
-  // NEW: State to hold our internal links
+  // State to hold our internal links
   const [relatedPatterns, setRelatedPatterns] = useState<any[]>([]);
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -27,11 +27,15 @@ export default function PatternClient() {
     async function fetchPatternData() {
       if (!slug) return;
 
-      const { data: patternData } = await supabase
-        .from('patterns')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+      // NEW: Helper check to verify if the slug is actually a UUID ID
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+
+      // NEW: Dynamic query based on whether it's an ID or a Slug
+      const query = isUuid
+        ? supabase.from('patterns').select('*').eq('id', slug).single()
+        : supabase.from('patterns').select('*').eq('slug', slug).single();
+
+      const { data: patternData } = await query;
 
       if (patternData) {
         setPattern(patternData);
@@ -58,7 +62,7 @@ export default function PatternClient() {
           setInstructions(stepsData);
         }
 
-        // --- NEW: DYNAMIC INTERNAL LINKING ENGINE ---
+        // --- DYNAMIC INTERNAL LINKING ENGINE ---
         // Fetch 3 other published patterns to pass SEO authority
         const { data: relatedData } = await supabase
           .from('patterns')
@@ -287,7 +291,7 @@ export default function PatternClient() {
           </section>
         </div>
 
-        {/* NEW: DYNAMIC INTERNAL LINKING UI */}
+        {/* DYNAMIC INTERNAL LINKING UI */}
         {relatedPatterns.length > 0 && (
           <div className="mt-20 pt-12 border-t border-gray-200">
             <h2 className="text-2xl font-extrabold tracking-tight mb-6">You Might Also Like</h2>
