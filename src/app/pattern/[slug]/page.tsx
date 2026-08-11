@@ -15,10 +15,13 @@ const isUuid = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 // 1. PROGRAMMATIC SEO: Generate dynamic titles and descriptions
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const query = isUuid(params.slug) 
-    ? supabase.from('patterns').select('*').eq('id', params.slug).single()
-    : supabase.from('patterns').select('*').eq('slug', params.slug).single();
+// UPDATE: params is now treated as a Promise for Next.js 15 compatibility
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params; // <--- The crucial fix
+
+  const query = isUuid(slug) 
+    ? supabase.from('patterns').select('*').eq('id', slug).single()
+    : supabase.from('patterns').select('*').eq('slug', slug).single();
 
   const { data: pattern } = await query;
 
@@ -41,7 +44,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     
     // THE SEO SHIELD: Tells Google the exact, clean URL to index
     alternates: {
-      canonical: `https://crpapo.com/pattern/${pattern.slug || params.slug}`,
+      canonical: `https://crpapo.com/pattern/${pattern.slug || slug}`,
     },
     
     openGraph: {
@@ -52,11 +55,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function PatternPage({ params }: { params: { slug: string } }) {
+// UPDATE: params is now treated as a Promise here as well
+export default async function PatternPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params; // <--- The crucial fix
+
   // Fetch data specifically for the AI Schema using the SLUG or ID
-  const query = isUuid(params.slug) 
-    ? supabase.from('patterns').select('*').eq('id', params.slug).single()
-    : supabase.from('patterns').select('*').eq('slug', params.slug).single();
+  const query = isUuid(slug) 
+    ? supabase.from('patterns').select('*').eq('id', slug).single()
+    : supabase.from('patterns').select('*').eq('slug', slug).single();
 
   const { data: pattern } = await query;
 
@@ -86,7 +92,7 @@ export default async function PatternPage({ params }: { params: { slug: string }
       "@type": "ListItem",
       "position": currentPosition,
       "name": pattern.title,
-      "item": `https://crpapo.com/pattern/${pattern.slug || params.slug}`
+      "item": `https://crpapo.com/pattern/${pattern.slug || slug}`
     });
 
     schemas.push({
