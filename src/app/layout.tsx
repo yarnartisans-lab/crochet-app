@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +31,27 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Google Analytics GA4 */}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-6965SMN50D"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-6965SMN50D', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[#FAFAF9] text-[#2D2D2D]">
         
         {/* Main Content Area */}
@@ -67,7 +89,6 @@ export default function RootLayout({
               <div>
                 <h3 className="font-bold text-[#2D2D2D] mb-4">Legal</h3>
                 <ul className="space-y-3 text-sm text-gray-500 font-medium">
-                  {/* You can replace '#' with actual paths like '/terms' once you build those pages */}
                   <li><Link href="#" className="hover:text-[#D97757] transition-colors">Terms of Service</Link></li>
                   <li><Link href="#" className="hover:text-[#D97757] transition-colors">Privacy Policy</Link></li>
                   <li><Link href="#" className="hover:text-[#D97757] transition-colors">Contact Us</Link></li>

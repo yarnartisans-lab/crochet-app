@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 
 export default function CreatorProfile() {
@@ -76,9 +77,15 @@ export default function CreatorProfile() {
       <header className="bg-white border-b border-gray-200 py-16 px-6">
         <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
           
-          <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex-shrink-0">
+          <div className="w-32 h-32 relative rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex-shrink-0">
             {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+              <Image 
+                src={profile.avatar_url} 
+                alt={profile.username} 
+                fill
+                className="object-cover"
+                sizes="128px"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
                 <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -150,13 +157,18 @@ export default function CreatorProfile() {
             {patterns.map((pattern) => {
               const imageUrl = pattern.image_url || fallbackImage;
               return (
-                // FIXED: Added the pattern.id fallback here
                 <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
                   <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                    <img src={imageUrl} alt={pattern.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <Image 
+                      src={imageUrl} 
+                      alt={pattern.title} 
+                      width={600}
+                      height={800}
+                      className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                      <div className="text-white">
-                        <p className="font-bold text-lg leading-tight mb-1">{pattern.title}</p>
+                      <div className="text-white w-full">
+                        <p className="font-bold text-lg leading-tight mb-1 truncate">{pattern.title}</p>
                         <p className="text-sm opacity-90 font-medium">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
                       </div>
                     </div>

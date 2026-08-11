@@ -92,16 +92,14 @@ function ExploreContent() {
   };
 
   // Centralized function to update the URL when any filter changes
-  const updateFilters = (newSearch?: string, newCategory?: string, newDifficulty?: string, newLanguage?: string) => {
+  const updateFilters = (newSearch?: string, newDifficulty?: string, newLanguage?: string) => {
     const params = new URLSearchParams();
     
     const finalSearch = newSearch !== undefined ? newSearch : searchInput;
-    const finalCategory = newCategory !== undefined ? newCategory : currentCategory;
     const finalDifficulty = newDifficulty !== undefined ? newDifficulty : currentDifficulty;
     const finalLanguage = newLanguage !== undefined ? newLanguage : currentLanguage;
 
     if (finalSearch.trim()) params.set('q', finalSearch.trim());
-    if (finalCategory) params.set('category', finalCategory);
     if (finalDifficulty) params.set('difficulty', finalDifficulty);
     if (finalLanguage) params.set('language', finalLanguage);
 
@@ -111,6 +109,29 @@ function ExploreContent() {
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       updateFilters(searchInput);
+    }
+  };
+
+  // --- NEW: SEO Category Navigation ---
+  // Routes users directly to the dedicated SEO pages instead of URL parameters
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = e.target.value;
+    if (!selected) {
+      router.push('/explore');
+      return;
+    }
+
+    const categoryMap: Record<string, string> = {
+      'Garments': 'garments',
+      'Accessories': 'accessories',
+      'Amigurumi / Plushies': 'amigurumi',
+      'Home Decor': 'home-decor',
+      'Blankets': 'blankets'
+    };
+
+    const slug = categoryMap[selected];
+    if (slug) {
+      router.push(`/category/${slug}`);
     }
   };
 
@@ -148,7 +169,7 @@ function ExploreContent() {
             
             <select 
               value={currentCategory} 
-              onChange={(e) => updateFilters(undefined, e.target.value, undefined, undefined)}
+              onChange={handleCategoryChange}
               className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
             >
               <option value="">All Categories</option>
@@ -161,7 +182,7 @@ function ExploreContent() {
 
             <select 
               value={currentDifficulty} 
-              onChange={(e) => updateFilters(undefined, undefined, e.target.value, undefined)}
+              onChange={(e) => updateFilters(undefined, e.target.value, undefined)}
               className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
             >
               <option value="">All Difficulties</option>
@@ -173,7 +194,7 @@ function ExploreContent() {
 
             <select 
               value={currentLanguage} 
-              onChange={(e) => updateFilters(undefined, undefined, undefined, e.target.value)}
+              onChange={(e) => updateFilters(undefined, undefined, e.target.value)}
               className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
             >
               <option value="">All Languages</option>
@@ -226,12 +247,11 @@ function ExploreContent() {
                 const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
                 
                 return (
-                  // FIXED: Added the pattern.id fallback here
                   <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
                     <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
                       <Image 
                         src={imageUrl} 
-                        alt={seoAltText} // DYNAMIC ALT TEXT INJECTED HERE
+                        alt={seoAltText}
                         width={600} 
                         height={800} 
                         className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
