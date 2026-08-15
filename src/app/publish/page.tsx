@@ -122,23 +122,37 @@ export default function PublishWizard() {
 
     if (!user) {
       alert('Please log in to publish.');
+      setLoading(false);
       return;
     }
 
-    // 1. Generate SEO-friendly slug FIRST (so we can use it for image names)
-    const generatedSlug = title
+    // 1. Generate SEO-friendly base slug
+    const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-') // Replaces spaces and special chars with hyphens
       .replace(/(^-|-$)+/g, '');   // Removes leading/trailing hyphens
 
+    // 2. High-Performance Slug Checker (Single Query)
+    let finalSlug = baseSlug;
+
+    const { data: existingPattern } = await supabase
+      .from('patterns')
+      .select('slug')
+      .eq('slug', baseSlug)
+      .maybeSingle();
+
+    if (existingPattern) {
+      // If the base slug is taken, append a random 5-character hash to guarantee uniqueness
+      const randomHash = Math.random().toString(36).substring(2, 7);
+      finalSlug = `${baseSlug}-${randomHash}`;
+    }
+
     let finalUrls: string[] = [];
 
-    // 2. Upload all images with SEO-OPTIMIZED FILE NAMES
+    // 3. Upload all images with the guaranteed unique slug
     for (let i = 0; i < images.length; i++) {
-      // Creates names like: no-sew-starfish-1-8492.webp
-      // Includes a tiny timestamp slice at the end just to prevent accidental overwrites
       const uniqueSuffix = Date.now().toString().slice(-4);
-      const fileName = `${generatedSlug}-${i + 1}-${uniqueSuffix}.webp`; 
+      const fileName = `${finalSlug}-${i + 1}-${uniqueSuffix}.webp`; 
       
       const { error: uploadError } = await supabase.storage
         .from('pattern_images')
@@ -150,7 +164,7 @@ export default function PublishWizard() {
       }
     }
 
-    // 3. Insert Pattern 
+    // 4. Insert Pattern 
     const mainImageUrl = finalUrls.length > 0 ? finalUrls[0] : null;
 
     const { data: patternData, error: patternError } = await supabase
@@ -158,7 +172,7 @@ export default function PublishWizard() {
       .insert({
         designer_id: user.id,
         title,
-        slug: generatedSlug, 
+        slug: finalSlug, // USING THE VERIFIED UNIQUE SLUG HERE
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
@@ -182,7 +196,7 @@ export default function PublishWizard() {
       return;
     }
 
-    // 4. Insert Steps
+    // 5. Insert Steps
     const stepsToInsert = instructions
       .filter(step => step.instruction.trim() !== '')
       .map(step => ({
@@ -195,7 +209,7 @@ export default function PublishWizard() {
       await supabase.from('pattern_steps').insert(stepsToInsert);
     }
 
-    // Redirect to the SEO slug instead of the raw ID
+    // Redirect to the newly generated unique slug
     router.push(`/pattern/${patternData.slug}`);
   };
 
