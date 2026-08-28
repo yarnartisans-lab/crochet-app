@@ -17,9 +17,7 @@ export default function PatternClient() {
   const [completedRows, setCompletedRows] = useState<number[]>([]);
   const [designerName, setDesignerName] = useState<string>('Anonymous');
   
-  // State to hold our internal links
   const [relatedPatterns, setRelatedPatterns] = useState<any[]>([]);
-  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isReported, setIsReported] = useState(false);
 
@@ -27,10 +25,8 @@ export default function PatternClient() {
     async function fetchPatternData() {
       if (!slug) return;
 
-      // NEW: Helper check to verify if the slug is actually a UUID ID
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
-      // NEW: Dynamic query based on whether it's an ID or a Slug
       const query = isUuid
         ? supabase.from('patterns').select('*').eq('id', slug).single()
         : supabase.from('patterns').select('*').eq('slug', slug).single();
@@ -62,13 +58,11 @@ export default function PatternClient() {
           setInstructions(stepsData);
         }
 
-        // --- DYNAMIC INTERNAL LINKING ENGINE ---
-        // Fetch 3 other published patterns to pass SEO authority
         const { data: relatedData } = await supabase
           .from('patterns')
           .select('id, title, slug, image_url, image_urls, category, difficulty_level')
           .eq('is_published', true)
-          .neq('id', patternData.id) // Exclude the pattern we are currently looking at
+          .neq('id', patternData.id)
           .limit(3);
 
         if (relatedData) {
@@ -177,12 +171,12 @@ export default function PatternClient() {
               )}
             </div>
             
-            <div>
+            <header>
               <h1 className="text-3xl font-extrabold tracking-tight mb-1">{pattern.title}</h1>
               <Link href={`/creator/${designerName}`} className="inline-block text-[#D97757] font-semibold text-sm hover:underline hover:text-[#C26243] transition-colors">
                 By @{designerName}
               </Link>
-            </div>
+            </header>
 
             <div className="grid grid-cols-2 gap-4 text-sm bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
               <div>
@@ -248,7 +242,7 @@ export default function PatternClient() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                 {pattern.materials && (
                   <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <h3 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Materials Needed</h3>
+                    <h2 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Materials Needed</h2>
                     <div className="text-sm text-[#2D2D2D] whitespace-pre-wrap leading-relaxed">
                       {pattern.materials}
                     </div>
@@ -256,7 +250,7 @@ export default function PatternClient() {
                 )}
                 {pattern.abbreviations && (
                   <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                    <h3 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Abbreviations</h3>
+                    <h2 className="text-xs font-bold text-[#D97757] uppercase tracking-wider mb-3">Abbreviations</h2>
                     <div className="text-sm text-[#2D2D2D] whitespace-pre-wrap leading-relaxed">
                       {pattern.abbreviations}
                     </div>
@@ -266,14 +260,22 @@ export default function PatternClient() {
             )}
 
             <h2 className="text-2xl font-bold mb-6">Instructions</h2>
-            <div className="space-y-3">
+            
+            {/* CHANGED to an Ordered List for proper SEO sequencing */}
+            <ol className="space-y-3">
               {instructions.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 bg-white rounded-2xl border border-gray-100">No instructions found.</div>
+                <li className="p-8 text-center text-gray-500 bg-white rounded-2xl border border-gray-100 list-none">No instructions found.</li>
               ) : (
                 instructions.map((step, index) => {
                   const isComplete = completedRows.includes(index);
                   return (
-                    <div key={step.id || index} onClick={() => toggleRow(index)} className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ease-in-out ${isComplete ? 'bg-gray-50 border-transparent opacity-60' : 'bg-white border-gray-100 shadow-sm hover:border-[#D97757] hover:shadow-md'}`}>
+                    /* CHANGED to a List Item and added the ID for search engine deep linking */
+                    <li 
+                      key={step.id || index} 
+                      id={`step-${index + 1}`}
+                      onClick={() => toggleRow(index)} 
+                      className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ease-in-out list-none ${isComplete ? 'bg-gray-50 border-transparent opacity-60' : 'bg-white border-gray-100 shadow-sm hover:border-[#D97757] hover:shadow-md'}`}
+                    >
                       <div className="flex items-start gap-4">
                         <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-0.5 transition-colors ${isComplete ? 'bg-[#D97757] border-[#D97757]' : 'border-gray-300'}`}>
                           {isComplete && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
@@ -283,15 +285,14 @@ export default function PatternClient() {
                           <p className={`text-lg leading-relaxed ${isComplete ? 'line-through text-gray-400' : 'text-[#2D2D2D]'}`}>{step.instruction}</p>
                         </div>
                       </div>
-                    </div>
+                    </li>
                   );
                 })
               )}
-            </div>
+            </ol>
           </section>
         </div>
 
-        {/* DYNAMIC INTERNAL LINKING UI */}
         {relatedPatterns.length > 0 && (
           <div className="mt-20 pt-12 border-t border-gray-200">
             <h2 className="text-2xl font-extrabold tracking-tight mb-6">You Might Also Like</h2>

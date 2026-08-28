@@ -6,14 +6,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 
-// INCREASED TO 24 PATTERNS PER LOAD
 const PAGE_SIZE = 24;
 
 function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // 1. Get all current filters from the URL
   const query = searchParams.get('q') || '';
   const currentCategory = searchParams.get('category') || '';
   const currentDifficulty = searchParams.get('difficulty') || '';
@@ -23,7 +21,6 @@ function ExploreContent() {
   const [patterns, setPatterns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Pagination States
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -34,7 +31,6 @@ function ExploreContent() {
     setSearchInput(query);
   }, [query]);
 
-  // Helper to build the base query with active filters
   const buildQuery = () => {
     let dbQuery = supabase
       .from('patterns')
@@ -51,11 +47,10 @@ function ExploreContent() {
     return dbQuery;
   };
 
-  // 2. Fetch Initial Data based on ALL active filters
   useEffect(() => {
     async function fetchSearchData() {
       setLoading(true);
-      setPage(0); // Reset pagination on new filters
+      setPage(0); 
       
       const dbQuery = buildQuery().range(0, PAGE_SIZE - 1);
       const { data } = await dbQuery;
@@ -73,7 +68,6 @@ function ExploreContent() {
     fetchSearchData();
   }, [query, currentCategory, currentDifficulty, currentLanguage]);
 
-  // 3. Load More Functionality
   const loadMore = async () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -91,7 +85,6 @@ function ExploreContent() {
     setLoadingMore(false);
   };
 
-  // Centralized function to update the URL when any filter changes
   const updateFilters = (newSearch?: string, newDifficulty?: string, newLanguage?: string) => {
     const params = new URLSearchParams();
     
@@ -112,8 +105,6 @@ function ExploreContent() {
     }
   };
 
-  // --- NEW: SEO Category Navigation ---
-  // Routes users directly to the dedicated SEO pages instead of URL parameters
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value;
     if (!selected) {
@@ -137,16 +128,36 @@ function ExploreContent() {
 
   const fallbackImage = 'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
 
+  // 1. DIRECTORY SCHEMA: Tells Google this is a curated list of tutorials
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": patterns.map((pattern, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "url": `https://crpapo.com/pattern/${pattern.slug || pattern.id}`,
+      "name": pattern.title
+    }))
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] pb-24">
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-6 sm:py-8">
+      {/* Inject the dynamic Schema into the DOM */}
+      {patterns.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        />
+      )}
+
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-6 sm:py-8">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]">← Back to Home</Link>
             <span className="font-extrabold tracking-tighter text-xl">Crpapo</span>
           </div>
           
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h1 id="explore-title" className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             {query ? `Search results for "${query}"` : 'Explore All Patterns'}
           </h1>
           
@@ -164,9 +175,7 @@ function ExploreContent() {
             </svg>
           </div>
           
-          {/* FUNCTIONAL DROPDOWN FILTERS */}
           <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-            
             <select 
               value={currentCategory} 
               onChange={handleCategoryChange}
@@ -207,7 +216,6 @@ function ExploreContent() {
               <option value="Portuguese">Portuguese</option>
             </select>
 
-            {/* Clear Filters Button */}
             {(currentCategory || currentDifficulty || currentLanguage) && (
               <button 
                 onClick={() => {
@@ -219,12 +227,12 @@ function ExploreContent() {
                 Clear All ✕
               </button>
             )}
-
           </div>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10">
+      {/* 2. SEMANTIC FIX: Tied the <main> block directly to the <h1> title */}
+      <main aria-labelledby="explore-title" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10">
         {loading ? (
           <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
              {[1, 2, 3, 4, 5, 6].map((skeleton) => (
@@ -241,36 +249,38 @@ function ExploreContent() {
               {patterns.map((pattern) => {
                 const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
                 
-                // --- DYNAMIC IMAGE SEO ---
                 const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
                 const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
                 const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
                 
                 return (
-                  <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
-                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                      <Image 
-                        src={imageUrl} 
-                        alt={seoAltText}
-                        width={600} 
-                        height={800} 
-                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
-                        <div className="text-white w-full">
-                          <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                  // 3. SEMANTIC FIX: Converted the card wrapper to an <article>
+                  <article key={pattern.id} className="group block break-inside-avoid">
+                    <Link href={`/pattern/${pattern.slug || pattern.id}`}>
+                      <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                        <Image 
+                          src={imageUrl} 
+                          alt={seoAltText}
+                          width={600} 
+                          height={800} 
+                          className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
+                          <div className="text-white w-full">
+                            {/* SEMANTIC FIX: Upgraded pattern title from <p> to <h2> */}
+                            <h2 className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</h2>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </article>
                 );
               })}
             </div>
 
-            {/* LOAD MORE BUTTON */}
             {hasMore && (
               <div className="mt-12 text-center">
                 <button

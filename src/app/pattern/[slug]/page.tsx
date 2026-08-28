@@ -14,10 +14,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const isUuid = (str: string) => 
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-// 1. PROGRAMMATIC SEO: Generate dynamic titles and descriptions
-// UPDATE: params is now treated as a Promise for Next.js 15 compatibility
+// 1. PROGRAMMATIC SEO: Generate dynamic titles, descriptions, AND Social Cards
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params; // <--- The crucial fix
+  const { slug } = await params;
 
   const query = isUuid(slug) 
     ? supabase.from('patterns').select('*').eq('id', slug).single()
@@ -37,6 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const designerName = profile?.username || 'Creator';
   const category = pattern.category || 'Craft';
+  const mainImage = pattern.image_urls?.[0] || pattern.image_url || '';
 
   return {
     title: `${pattern.title} | Free ${category} Pattern by @${designerName} | Crpapo`,
@@ -50,14 +50,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: `${pattern.title} | Interactive Pattern | Crpapo`,
       description: `Track your rows interactively! Free pattern by @${designerName}.`,
-      images: pattern.image_urls?.[0] || pattern.image_url ? [pattern.image_urls?.[0] || pattern.image_url] : [],
+      images: mainImage ? [mainImage] : [],
+      type: 'article',
+    },
+
+    // ADDED: Crucial for rich preview cards on Pinterest, Twitter, and Discord
+    twitter: {
+      card: 'summary_large_image',
+      title: `${pattern.title} | Interactive Pattern | Crpapo`,
+      description: `Track your rows interactively! Free step-by-step pattern.`,
+      images: mainImage ? [mainImage] : [],
     }
   };
 }
 
-// UPDATE: params is now treated as a Promise here as well
 export default async function PatternPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; // <--- The crucial fix
+  const { slug } = await params;
 
   // Fetch data specifically for the AI Schema using the SLUG or ID
   const query = isUuid(slug) 
@@ -69,9 +77,9 @@ export default async function PatternPage({ params }: { params: Promise<{ slug: 
   let schemasCode = null;
 
   if (pattern) {
-    const schemas: any[] = []; // Array to hold multiple schemas
+    const schemas: any[] = []; 
 
-    // 2. BREADCRUMB SCHEMA: Gives Google the visual navigation path
+    // 2. BREADCRUMB SCHEMA
     const breadcrumbItems = [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://crpapo.com/" },
       { "@type": "ListItem", "position": 2, "name": "Explore", "item": "https://crpapo.com/explore" }
@@ -108,22 +116,32 @@ export default async function PatternPage({ params }: { params: Promise<{ slug: 
       .eq('pattern_id', pattern.id)
       .order('step_number', { ascending: true });
 
-    // 3. AEO/AIO OPTIMIZATION: Build the HowTo JSON-LD Schema
+    // 3. AEO/AIO OPTIMIZATION: Build the Strict HowTo JSON-LD Schema
     if (steps) {
+      const pageUrl = `https://crpapo.com/pattern/${pattern.slug || slug}`;
+      
       schemas.push({
         "@context": "https://schema.org",
         "@type": "HowTo",
         "name": pattern.title,
         "description": `Step-by-step instructions for ${pattern.title}`,
         "image": pattern.image_urls?.[0] || pattern.image_url || "",
+        
+        // Google requires specific distinction between Tools (hook) and Supplies (yarn)
         "tool": [
-          { "@type": "HowToTool", "name": pattern.hook_size || "Crochet Hook / Knitting Needles" },
-          { "@type": "HowToTool", "name": pattern.yarn_weight || "Yarn" }
+          { "@type": "HowToTool", "name": pattern.hook_size ? `Crochet Hook size ${pattern.hook_size}` : "Crochet Hook" }
         ],
+        "supply": [
+          { "@type": "HowToSupply", "name": pattern.yarn_weight ? `${pattern.yarn_weight} Yarn` : "Yarn" }
+        ],
+        
+        // Structured steps allow Voice Assistants to read the pattern row-by-row
         "step": steps.map((s: any, i: number) => ({
           "@type": "HowToStep",
+          "name": `Row or Step ${i + 1}`,
           "position": i + 1,
-          "text": s.instruction
+          "text": s.instruction,
+          "url": `${pageUrl}#step-${i + 1}` // Allows Google to deep-link straight to a specific row
         }))
       });
     }

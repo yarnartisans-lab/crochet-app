@@ -16,7 +16,6 @@ export default function HomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
-      // LIMIT ADDED: Sorting by highest views first, but strictly limited to 12 patterns for speed
       const { data: publishedPatterns } = await supabase
         .from('patterns')
         .select('*')
@@ -55,8 +54,31 @@ export default function HomePage() {
 
   const fallbackImage = 'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
 
+  // 1. BRAND SCHEMA: Establishes Crpapo's entity authority with Google
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Crpapo",
+    "url": "https://crpapo.com",
+    "description": "Interactive crochet and amigurumi patterns.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Crpapo",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://crpapo.com/icon.png"
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] scroll-smooth">
+      {/* Injecting the WebSite schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+
       <nav className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-6">
@@ -98,9 +120,10 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main id="explore" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-16 sm:pt-10 sm:pb-24 scroll-mt-20">
+      {/* 2. SEMANTIC FIX: Changed <main> to a labeled <section> */}
+      <section aria-labelledby="explore-heading" id="explore" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-16 sm:pt-10 sm:pb-24 scroll-mt-20">
         <div className="flex items-center justify-between mb-6 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Explore Popular Patterns</h2>
+          <h2 id="explore-heading" className="text-xl sm:text-2xl font-bold tracking-tight">Explore Popular Patterns</h2>
         </div>
 
         {loading ? (
@@ -118,36 +141,37 @@ export default function HomePage() {
             <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
               {patterns.map((pattern) => {
                 const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
-                
-                // 1. DYNAMIC IMAGE SEO FOR CARDS
                 const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
                 const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
                 const seoAltText = `Free step-by-step ${categoryContext} pattern for ${pattern.title} ${difficultyContext}.`;
                 
                 return (
-                  // FIXED: Added the pattern.id fallback here
-                  <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
-                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                      <Image 
-                        src={imageUrl} 
-                        alt={seoAltText} 
-                        width={600}
-                        height={800}
-                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
-                        <div className="text-white w-full">
-                          <p className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">By @{pattern.designer_name}</p>
-                            <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/20 rounded-md backdrop-blur-sm whitespace-nowrap">
-                              {pattern.difficulty_level || 'Varies'}
-                            </span>
+                  // 3. SEMANTIC FIX: Wrapped each pattern card in an <article> tag
+                  <article key={pattern.id} className="group block break-inside-avoid">
+                    <Link href={`/pattern/${pattern.slug || pattern.id}`}>
+                      <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                        <Image 
+                          src={imageUrl} 
+                          alt={seoAltText} 
+                          width={600}
+                          height={800}
+                          className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 sm:p-5">
+                          <div className="text-white w-full">
+                            {/* SEMANTIC FIX: Upgraded pattern titles to <h3> */}
+                            <h3 className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">{pattern.title}</h3>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">By @{pattern.designer_name}</p>
+                              <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/20 rounded-md backdrop-blur-sm whitespace-nowrap">
+                                {pattern.difficulty_level || 'Varies'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </article>
                 );
               })}
             </div>
@@ -159,7 +183,7 @@ export default function HomePage() {
             </div>
           </>
         )}
-      </main>
+      </section>
     </div>
   );
 }

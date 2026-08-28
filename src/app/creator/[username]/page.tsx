@@ -65,8 +65,42 @@ export default function CreatorProfile() {
     </div>
   );
 
+  // 1. E-E-A-T SCHEMA: Proves to Google this is a real, authoritative creator
+  const profileSchema = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "mainEntity": {
+      "@type": "Person",
+      "name": profile.username,
+      "description": profile.bio || `Crochet designer and creator of ${patterns.length} patterns on Crpapo.`,
+      "image": profile.avatar_url || fallbackImage,
+      "sameAs": [
+        profile.website_url,
+        profile.pinterest_url,
+        profile.instagram_url,
+        profile.youtube_url
+      ].filter(Boolean) // This automatically links their external authority (like a big Instagram) to your domain
+    }
+  };
+
+  // 2. ITEMLIST SCHEMA: Catalogs their specific patterns
+  const itemListSchema = patterns.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": patterns.map((pattern, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "url": `https://crpapo.com/pattern/${pattern.slug || pattern.id}`,
+      "name": pattern.title
+    }))
+  } : null;
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]">
+      {/* Injecting the dynamic Schemas */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }} />
+      {itemListSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />}
+
       <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="text-xl font-extrabold tracking-tighter">Crpapo</Link>
@@ -81,7 +115,7 @@ export default function CreatorProfile() {
             {profile.avatar_url ? (
               <Image 
                 src={profile.avatar_url} 
-                alt={profile.username} 
+                alt={`${profile.username}'s profile picture`} 
                 fill
                 className="object-cover"
                 sizes="128px"
@@ -103,7 +137,6 @@ export default function CreatorProfile() {
               <p className="text-[#2D2D2D] leading-relaxed max-w-xl">{profile.bio}</p>
             )}
 
-            {/* Social Links Display */}
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {profile.website_url && (
                 <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#D97757] hover:text-[#C26243] bg-[#D97757]/10 px-3 py-1.5 rounded-full transition-colors">
@@ -145,8 +178,9 @@ export default function CreatorProfile() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-16">
-        <h2 className="text-xl font-bold tracking-tight mb-8">Patterns by @{profile.username}</h2>
+      {/* Linked <main> directly to the H2 title for document structure */}
+      <main aria-labelledby="creator-patterns-title" className="max-w-7xl mx-auto px-6 py-16">
+        <h2 id="creator-patterns-title" className="text-xl font-bold tracking-tight mb-8">Patterns by @{profile.username}</h2>
         
         {patterns.length === 0 ? (
           <div className="text-center py-20 text-gray-500 font-medium border-2 border-dashed border-gray-200 rounded-2xl">
@@ -155,25 +189,28 @@ export default function CreatorProfile() {
         ) : (
           <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
             {patterns.map((pattern) => {
-              const imageUrl = pattern.image_url || fallbackImage;
+              const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
               return (
-                <Link key={pattern.id} href={`/pattern/${pattern.slug || pattern.id}`} className="group block break-inside-avoid">
-                  <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                    <Image 
-                      src={imageUrl} 
-                      alt={pattern.title} 
-                      width={600}
-                      height={800}
-                      className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                      <div className="text-white w-full">
-                        <p className="font-bold text-lg leading-tight mb-1 truncate">{pattern.title}</p>
-                        <p className="text-sm opacity-90 font-medium">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                // Upgraded to <article> and <h3>
+                <article key={pattern.id} className="group block break-inside-avoid">
+                  <Link href={`/pattern/${pattern.slug || pattern.id}`}>
+                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                      <Image 
+                        src={imageUrl} 
+                        alt={`Free pattern: ${pattern.title}`} 
+                        width={600}
+                        height={800}
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
+                        <div className="text-white w-full">
+                          <h3 className="font-bold text-lg leading-tight mb-1 truncate">{pattern.title}</h3>
+                          <p className="text-sm opacity-90 font-medium">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </article>
               );
             })}
           </div>
