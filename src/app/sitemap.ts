@@ -1,31 +1,45 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-// THE CULPRIT REMOVED: Replaced the 24-hour revalidate lock with force-dynamic
-// This guarantees Next.js reads the live production database every time Google requests the sitemap
-export const dynamic = 'force-dynamic';
+// The absolute command to kill Next.js Route Caching
+export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Added created_at fallback to prevent the query from silently failing if updated_at is missing
   const { data: patterns, error } = await supabase
     .from('patterns')
-    .select('id, slug, updated_at, created_at')
+    .select('id, slug, created_at')
     .eq('is_published', true);
 
+  // DEBUG TRAP 1: If Supabase throws an authentication or RLS error, it prints as a URL
   if (error) {
-    console.error("Supabase Error fetching patterns for sitemap:", error.message);
+    return [
+      {
+        url: `https://crpapo.com/ERROR-SUPABASE-${error.message.replace(/\s+/g, '-')}`,
+        lastModified: new Date(),
+      }
+    ];
   }
 
-  const patternUrls: MetadataRoute.Sitemap = patterns?.map((pattern) => ({
+  // DEBUG TRAP 2: If connection succeeds but 0 patterns match the filter
+  if (!patterns || patterns.length === 0) {
+    return [
+      {
+        url: `https://crpapo.com/DEBUG-CONNECTION-SUCCESS-BUT-ZERO-PATTERNS-FOUND`,
+        lastModified: new Date(),
+      }
+    ];
+  }
+
+  const patternUrls: MetadataRoute.Sitemap = patterns.map((pattern) => ({
     url: `https://crpapo.com/pattern/${pattern.slug || pattern.id}`,
-    lastModified: new Date(pattern.updated_at || pattern.created_at || new Date()),
+    lastModified: new Date(pattern.created_at || new Date()),
     changeFrequency: 'weekly' as const,
     priority: 0.8,
-  })) || [];
+  }));
 
   const categories = ['garments', 'accessories', 'amigurumi', 'home-decor', 'blankets'];
   const categoryUrls: MetadataRoute.Sitemap = categories.map((cat) => ({
@@ -45,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: 'https://crpapo.com',
-      lastModified: new Date(),
+      lastModified: new Date(), // If this time changes when you refresh, the cache is dead.
       changeFrequency: 'daily',
       priority: 1,
     },
