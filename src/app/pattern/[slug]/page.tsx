@@ -23,7 +23,7 @@ async function getPatternData(slug: string) {
   return pattern;
 }
 
-// 1. DYNAMIC METADATA & OPEN GRAPH
+// 1. DYNAMIC METADATA & OPEN GRAPH WITH RICH IMAGE ATTRIBUTION
 export async function generateMetadata({
   params,
 }: {
@@ -50,8 +50,18 @@ export async function generateMetadata({
 
   const designerName = profile?.username || 'Creator';
   const category = pattern.category || 'Craft';
-  const mainImage = pattern.image_urls?.[0] || pattern.image_url || '';
+  const allImages: string[] = pattern.image_urls && pattern.image_urls.length > 0
+    ? pattern.image_urls
+    : pattern.image_url
+    ? [pattern.image_url]
+    : [];
+  const mainImage = allImages[0] || 'https://crpapo.com/icon.png';
   const canonicalUrl = `https://crpapo.com/pattern/${pattern.slug || slug}`;
+
+  const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
+  const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
+  const hookContext = pattern.hook_size ? `using ${pattern.hook_size} hook` : '';
+  const imageAltDescription = `Free ${pattern.title} ${categoryContext} pattern ${difficultyContext} ${hookContext} designed by @${designerName} on Crpapo.`.replace(/\s+/g, ' ').trim();
 
   return {
     title: `${pattern.title} | Free ${category} Pattern by @${designerName} | Crpapo`,
@@ -64,14 +74,21 @@ export async function generateMetadata({
       description: `Track your rows interactively! Free pattern by @${designerName}.`,
       url: canonicalUrl,
       siteName: 'Crpapo',
-      images: mainImage ? [{ url: mainImage, alt: pattern.title }] : [],
+      images: allImages.length > 0
+        ? allImages.map((imgUrl, idx) => ({
+            url: imgUrl,
+            width: 1200,
+            height: 1200,
+            alt: idx === 0 ? imageAltDescription : `${pattern.title} detailed crochet view ${idx + 1}`,
+          }))
+        : [{ url: mainImage, width: 512, height: 512, alt: pattern.title }],
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
       title: `${pattern.title} | Interactive Pattern | Crpapo`,
       description: `Track your rows interactively! Free step-by-step pattern.`,
-      images: mainImage ? [mainImage] : [],
+      images: [mainImage],
     },
   };
 }
@@ -113,20 +130,33 @@ export default async function PatternPage({
   const steps = stepsRes.data || [];
   const relatedPatterns = relatedRes.data || [];
 
-  // Structured Data (JSON-LD)
-  const schemas: any[] = [];
   const pageUrl = `https://crpapo.com/pattern/${pattern.slug || slug}`;
+  const allImages: string[] = pattern.image_urls && pattern.image_urls.length > 0
+    ? pattern.image_urls
+    : pattern.image_url
+    ? [pattern.image_url]
+    : [];
 
-  // Breadcrumb Schema
-  const breadcrumbItems = [
+  const categoryContext = pattern.category ? pattern.category.toLowerCase() : 'crochet';
+  const difficultyContext = pattern.difficulty_level ? `for ${pattern.difficulty_level.toLowerCase()}s` : '';
+  const hookContext = pattern.hook_size ? `using ${pattern.hook_size} hook` : '';
+  const semanticAlt = `Free ${pattern.title} ${categoryContext} pattern ${difficultyContext} ${hookContext} designed by @${designerName} on Crpapo.`.replace(/\s+/g, ' ').trim();
+
+  // STRUCTURED DATA (JSON-LD)
+  const schemas: any[] = [];
+
+  // 1. Breadcrumb Schema
+  const breadcrumbItems: any[] = [
     { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://crpapo.com/' },
     { '@type': 'ListItem', position: 2, name: 'Explore', item: 'https://crpapo.com/explore' },
   ];
 
   let currentPosition = 3;
+
   if (pattern.category) {
     const isAmigurumi =
       pattern.category.toLowerCase() === 'amigurumi / plushies' ||
+      pattern.category.toLowerCase() === 'amigurumi' ||
       pattern.category.toLowerCase() === 'amigurumi/plushies';
     const catSlug = isAmigurumi
       ? 'amigurumi'
@@ -154,14 +184,14 @@ export default async function PatternPage({
     itemListElement: breadcrumbItems,
   });
 
-  // HowTo Schema for Step-by-Step Instructions
+  // 2. HowTo Schema with Explicit Primary & Multi-Image Gallery for Google Image Search
   if (steps.length > 0) {
     schemas.push({
       '@context': 'https://schema.org',
       '@type': 'HowTo',
       name: pattern.title,
-      description: `Step-by-step instructions for ${pattern.title}`,
-      image: pattern.image_urls?.[0] || pattern.image_url || '',
+      description: `Step-by-step instructions for ${pattern.title}. Free interactive pattern with row tracking.`,
+      image: allImages.length > 0 ? allImages : ['https://crpapo.com/icon.png'],
       tool: [
         {
           '@type': 'HowToTool',
@@ -180,7 +210,29 @@ export default async function PatternPage({
         position: i + 1,
         text: s.instruction,
         url: `${pageUrl}#step-${i + 1}`,
+        ...(allImages[i] ? { image: allImages[i] } : {}),
       })),
+    });
+  }
+
+  // 3. ImageObject Schema specifically indexing the primary finished work in Google Images
+  if (allImages.length > 0) {
+    schemas.push({
+      '@context': 'https://schema.org',
+      '@type': 'ImageObject',
+      contentUrl: allImages[0],
+      url: allImages[0],
+      name: `${pattern.title} finished crochet pattern`,
+      description: semanticAlt,
+      caption: `${pattern.title} - free interactive pattern on Crpapo`,
+      author: {
+        '@type': 'Person',
+        name: designerName,
+      },
+      copyrightHolder: {
+        '@type': 'Person',
+        name: designerName,
+      },
     });
   }
 
