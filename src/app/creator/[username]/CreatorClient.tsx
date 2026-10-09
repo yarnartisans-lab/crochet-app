@@ -96,6 +96,18 @@ export default function CreatorClient({
             )}
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
+              {/* Creator Tip Jar Button */}
+              {profile.tip_link && (
+                <a
+                  href={profile.tip_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-bold text-gray-900 bg-[#FFDD00] hover:bg-[#FACC15] px-4 py-1.5 rounded-full transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  ☕ Tip Designer
+                </a>
+              )}
+
               {profile.website_url && (
                 <a
                   href={profile.website_url}

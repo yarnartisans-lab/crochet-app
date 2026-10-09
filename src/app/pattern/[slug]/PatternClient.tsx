@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
@@ -8,6 +8,7 @@ import { createClient } from '@/utils/supabase/client';
 interface PatternClientProps {
   initialPattern: any;
   initialDesignerName?: string;
+  initialDesignerTipLink?: string | null;
   initialSteps?: any[];
   initialRelatedPatterns?: any[];
   slug: string;
@@ -16,6 +17,7 @@ interface PatternClientProps {
 export default function PatternClient({
   initialPattern,
   initialDesignerName = 'Anonymous',
+  initialDesignerTipLink = null,
   initialSteps = [],
   initialRelatedPatterns = [],
   slug,
@@ -27,9 +29,17 @@ export default function PatternClient({
   const [loading, setLoading] = useState(!initialPattern);
   const [completedRows, setCompletedRows] = useState<number[]>([]);
   const [designerName, setDesignerName] = useState<string>(initialDesignerName);
+  const [designerTipLink] = useState<string | null>(initialDesignerTipLink);
   const [relatedPatterns, setRelatedPatterns] = useState<any[]>(initialRelatedPatterns);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isReported, setIsReported] = useState(false);
+
+  // New Features: Screen Wake Lock, Stitch Counter, and Cloud Bookmarking
+  const [isWakeLocked, setIsWakeLocked] = useState(false);
+  const [wakeLockSentinel, setWakeLockSentinel] = useState<any>(null);
+  const [stitchCount, setStitchCount] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
 
   // Client-side fallback fetch in case initialPattern was not provided
   useEffect(() => {
@@ -51,7 +61,7 @@ export default function PatternClient({
 
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('username')
+          .select('username, tip_link')
           .eq('id', patternData.designer_id)
           .single();
 
@@ -93,20 +103,82 @@ export default function PatternClient({
     }
   }, [pattern?.id, supabase]);
 
-  // Restore user row tracking progress from localStorage
+  // Restore row tracking and stitch counter progress from localStorage
   useEffect(() => {
     if (slug) {
-      const savedProgress = localStorage.getItem(`pattern_progress_${slug}`);
-      if (savedProgress) {
+      const savedRows = localStorage.getItem(`pattern_progress_${slug}`);
+      if (savedRows) {
         try {
-          setCompletedRows(JSON.parse(savedProgress));
+          setCompletedRows(JSON.parse(savedRows));
         } catch {
-          // ignore corrupted storage
+          // ignore parsing error
         }
+      }
+
+      const savedStitches = localStorage.getItem(`pattern_stitch_${slug}`);
+      if (savedStitches) {
+        setStitchCount(parseInt(savedStitches, 10) || 0);
       }
     }
   }, [slug]);
 
+  // Check if current user has saved/bookmarked this pattern
+  useEffect(() => {
+    async function checkSavedStatus() {
+      if (!pattern?.id) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('saved_patterns')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('pattern_id', pattern.id)
+          .maybeSingle();
+
+        if (data) setIsSaved(true);
+      }
+    }
+    checkSavedStatus();
+  }, [pattern?.id, supabase]);
+
+  // Toggle Keep Screen Awake (Screen Wake Lock API)
+  const toggleWakeLock = useCallback(async () => {
+    if (typeof window === 'undefined' || !('wakeLock' in navigator)) {
+      alert('Screen Wake Lock is not supported on this browser.');
+      return;
+    }
+
+    try {
+      if (isWakeLocked && wakeLockSentinel) {
+        await wakeLockSentinel.release();
+        setWakeLockSentinel(null);
+        setIsWakeLocked(false);
+      } else {
+        const sentinel = await (navigator as any).wakeLock.request('screen');
+        sentinel.addEventListener('release', () => {
+          setIsWakeLocked(false);
+          setWakeLockSentinel(null);
+        });
+        setWakeLockSentinel(sentinel);
+        setIsWakeLocked(true);
+      }
+    } catch (err: any) {
+      console.warn('Wake Lock request error:', err.message);
+    }
+  }, [isWakeLocked, wakeLockSentinel]);
+
+  // Release wake lock on unmount
+  useEffect(() => {
+    return () => {
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, [wakeLockSentinel]);
+
+  // Row progress handling
   const toggleRow = (index: number) => {
     let newCompletedRows: number[];
     if (completedRows.includes(index)) {
@@ -120,6 +192,68 @@ export default function PatternClient({
     }
   };
 
+  const handleResetProgress = () => {
+    if (completedRows.length === 0) return;
+    const confirmReset = window.confirm(
+      'Reset all row progress for this pattern? This will uncheck all completed rows.'
+    );
+    if (confirmReset) {
+      setCompletedRows([]);
+      if (slug) {
+        localStorage.removeItem(`pattern_progress_${slug}`);
+      }
+    }
+  };
+
+  // In-row stitch counter handlers
+  const updateStitches = (delta: number) => {
+    const next = Math.max(0, stitchCount + delta);
+    setStitchCount(next);
+    if (slug) {
+      localStorage.setItem(`pattern_stitch_${slug}`, next.toString());
+    }
+  };
+
+  const resetStitches = () => {
+    setStitchCount(0);
+    if (slug) {
+      localStorage.removeItem(`pattern_stitch_${slug}`);
+    }
+  };
+
+  // Toggle Save to Favorites (Bookmark)
+  const toggleSave = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert('Please log in or sign up to bookmark patterns to your account.');
+      return;
+    }
+
+    setSaveLoading(true);
+    try {
+      if (isSaved) {
+        await supabase
+          .from('saved_patterns')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('pattern_id', pattern.id);
+        setIsSaved(false);
+      } else {
+        await supabase
+          .from('saved_patterns')
+          .insert({ user_id: user.id, pattern_id: pattern.id });
+        setIsSaved(true);
+      }
+    } catch (err: any) {
+      console.error('Error toggling save:', err);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   const handleOutboundClick = async () => {
     if (pattern?.id) {
       await supabase.rpc('increment_clicks', { pattern_id: pattern.id });
@@ -130,6 +264,10 @@ export default function PatternClient({
     if (!pattern?.id || isReported) return;
     setIsReported(true);
     await supabase.rpc('increment_reports', { pattern_id: pattern.id });
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   if (loading) {
@@ -169,24 +307,89 @@ export default function PatternClient({
       className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
-        <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]">
-          ← Back to Patterns
+      {/* Sticky Crafting Toolbar */}
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between shadow-sm print:hidden">
+        <Link
+          href="/"
+          className="text-xs sm:text-sm font-semibold text-gray-500 hover:text-[#2D2D2D] whitespace-nowrap"
+        >
+          ← Patterns
         </Link>
-        <div className="flex items-center gap-4 w-1/3">
+
+        {/* Progress Bar & Reset */}
+        <div className="flex items-center gap-2 sm:gap-3 w-1/3 max-w-xs">
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
               className="bg-[#D97757] h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
-          <span className="text-xs font-bold text-gray-500">{progressPercentage}%</span>
+          <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
+            {progressPercentage}%
+          </span>
+          {completedRows.length > 0 && (
+            <button
+              onClick={handleResetProgress}
+              title="Reset progress"
+              className="text-[11px] font-bold text-gray-400 hover:text-red-500 px-1.5 py-0.5 rounded transition-colors"
+            >
+              Reset
+            </button>
+          )}
         </div>
-        <button className="text-sm font-semibold text-gray-400 cursor-default">Auto-Saved</button>
+
+        {/* Controls: Wake Lock & Save */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Keep Screen Awake Button */}
+          <button
+            onClick={toggleWakeLock}
+            title={isWakeLocked ? 'Screen will stay awake' : 'Click to keep screen awake'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+              isWakeLocked
+                ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-400 shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isWakeLocked ? 'bg-amber-500 animate-pulse' : 'bg-gray-400'
+              }`}
+            ></span>
+            <span className="hidden sm:inline">Keep Awake</span>
+            <span className="sm:hidden">Awake</span>
+          </button>
+
+          {/* Bookmark / Favorite Button */}
+          <button
+            onClick={toggleSave}
+            disabled={saveLoading}
+            title={isSaved ? 'Remove from favorites' : 'Save to favorites'}
+            className={`p-2 rounded-full transition-all ${
+              isSaved
+                ? 'bg-red-50 text-red-500 ring-1 ring-red-200'
+                : 'bg-gray-100 text-gray-500 hover:text-red-500 hover:bg-gray-200'
+            }`}
+          >
+            <svg
+              className="w-4 h-4"
+              fill={isSaved ? 'currentColor' : 'none'}
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              />
+            </svg>
+          </button>
+        </div>
       </nav>
 
       <main className="max-w-5xl mx-auto px-6 pt-10 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          {/* Sidebar */}
           <aside className="md:col-span-1 space-y-6">
             <div className="space-y-3">
               <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
@@ -200,7 +403,7 @@ export default function PatternClient({
                 />
               </div>
               {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 print:hidden">
                   {images.map((img: string, idx: number) => (
                     <button
                       key={idx}
@@ -251,7 +454,21 @@ export default function PatternClient({
               </div>
             </div>
 
-            <div className="space-y-3 pt-2">
+            {/* Action Buttons & Links */}
+            <div className="space-y-3 pt-2 print:hidden">
+              {/* Creator Tip Jar (Ko-fi / Buy Me a Coffee) */}
+              {designerTipLink && (
+                <a
+                  href={designerTipLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-[#FFDD00] text-gray-900 hover:bg-[#FACC15] transition-all shadow-sm"
+                >
+                  ☕ Tip Designer (Support)
+                </a>
+              )}
+
+              {/* Yarn Affiliate Link */}
               <a
                 href={pattern.affiliate_link || '#'}
                 target="_blank"
@@ -280,6 +497,7 @@ export default function PatternClient({
                 Buy Recommended Yarn
               </a>
 
+              {/* Video Tutorial Link */}
               <a
                 href={pattern.video_link || '#'}
                 target="_blank"
@@ -293,13 +511,29 @@ export default function PatternClient({
                   }`}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385-8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
                 </svg>
                 Watch Video Tutorial
               </a>
+
+              {/* Print Pattern Button */}
+              <button
+                onClick={handlePrint}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                  />
+                </svg>
+                Print Pattern
+              </button>
             </div>
 
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 print:hidden">
               <button
                 onClick={handleReport}
                 disabled={isReported}
@@ -325,6 +559,7 @@ export default function PatternClient({
             </div>
           </aside>
 
+          {/* Instructions and Details */}
           <section className="md:col-span-2 select-none">
             {(pattern.materials || pattern.abbreviations) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
@@ -419,8 +654,47 @@ export default function PatternClient({
           </section>
         </div>
 
+        {/* Floating In-Row Stitch Counter */}
+        <div className="fixed bottom-6 right-6 z-40 bg-white border border-gray-200 shadow-xl rounded-2xl p-3 flex items-center gap-3 print:hidden">
+          <div className="text-center px-1">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              Stitch
+            </span>
+            <span className="text-xl font-extrabold text-[#D97757] leading-none">
+              {stitchCount}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 border-l border-gray-200 pl-2">
+            <button
+              onClick={() => updateStitches(-1)}
+              className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold text-gray-700 flex items-center justify-center transition-colors"
+              title="Decrease stitch"
+            >
+              −
+            </button>
+            <button
+              onClick={() => updateStitches(1)}
+              className="w-8 h-8 rounded-lg bg-[#D97757] hover:bg-[#C26243] font-bold text-white flex items-center justify-center transition-colors shadow-sm"
+              title="Increase stitch"
+            >
+              +
+            </button>
+            {stitchCount > 0 && (
+              <button
+                onClick={resetStitches}
+                className="text-[10px] font-bold text-gray-400 hover:text-red-500 px-1 py-1"
+                title="Reset stitches"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Related Patterns */}
         {relatedPatterns.length > 0 && (
-          <div className="mt-20 pt-12 border-t border-gray-200">
+          <div className="mt-20 pt-12 border-t border-gray-200 print:hidden">
             <h2 className="text-2xl font-extrabold tracking-tight mb-6">You Might Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               {relatedPatterns.map((related) => {

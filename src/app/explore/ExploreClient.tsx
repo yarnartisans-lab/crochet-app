@@ -25,6 +25,8 @@ export default function ExploreClient({
   const currentCategory = searchParams.get('category') || '';
   const currentDifficulty = searchParams.get('difficulty') || '';
   const currentLanguage = searchParams.get('language') || '';
+  const currentHookSize = searchParams.get('hook') || '';
+  const currentYarnWeight = searchParams.get('yarn') || '';
 
   const supabase = createClient();
   const [patterns, setPatterns] = useState<any[]>(initialPatterns);
@@ -52,13 +54,25 @@ export default function ExploreClient({
     if (currentCategory) dbQuery = dbQuery.eq('category', currentCategory);
     if (currentDifficulty) dbQuery = dbQuery.eq('difficulty_level', currentDifficulty);
     if (currentLanguage) dbQuery = dbQuery.eq('language', currentLanguage);
+    if (currentHookSize) {
+      const cleanHook = currentHookSize.replace(/[^\d.]/g, '');
+      dbQuery = dbQuery.ilike('hook_size', `%${cleanHook}%`);
+    }
+    if (currentYarnWeight) dbQuery = dbQuery.ilike('yarn_weight', `%${currentYarnWeight}%`);
 
     return dbQuery;
   };
 
-  // Re-fetch when query or filters change on the client
+  // Re-fetch when query or any filter changes on client
   useEffect(() => {
-    const hasFilters = Boolean(query || currentCategory || currentDifficulty || currentLanguage);
+    const hasFilters = Boolean(
+      query ||
+        currentCategory ||
+        currentDifficulty ||
+        currentLanguage ||
+        currentHookSize ||
+        currentYarnWeight
+    );
     if (!hasFilters && patterns.length === initialPatterns.length && page === 0) {
       return;
     }
@@ -81,7 +95,14 @@ export default function ExploreClient({
     }
 
     fetchSearchData();
-  }, [query, currentCategory, currentDifficulty, currentLanguage]);
+  }, [
+    query,
+    currentCategory,
+    currentDifficulty,
+    currentLanguage,
+    currentHookSize,
+    currentYarnWeight,
+  ]);
 
   const loadMore = async () => {
     if (loadingMore) return;
@@ -100,17 +121,27 @@ export default function ExploreClient({
     setLoadingMore(false);
   };
 
-  const updateFilters = (newSearch?: string, newDifficulty?: string, newLanguage?: string) => {
+  const updateFilters = (
+    newSearch?: string,
+    newDifficulty?: string,
+    newLanguage?: string,
+    newHookSize?: string,
+    newYarnWeight?: string
+  ) => {
     const params = new URLSearchParams();
 
     const finalSearch = newSearch !== undefined ? newSearch : searchInput;
     const finalDifficulty = newDifficulty !== undefined ? newDifficulty : currentDifficulty;
     const finalLanguage = newLanguage !== undefined ? newLanguage : currentLanguage;
+    const finalHookSize = newHookSize !== undefined ? newHookSize : currentHookSize;
+    const finalYarnWeight = newYarnWeight !== undefined ? newYarnWeight : currentYarnWeight;
 
     if (finalSearch.trim()) params.set('q', finalSearch.trim());
     if (currentCategory) params.set('category', currentCategory);
     if (finalDifficulty) params.set('difficulty', finalDifficulty);
     if (finalLanguage) params.set('language', finalLanguage);
+    if (finalHookSize) params.set('hook', finalHookSize);
+    if (finalYarnWeight) params.set('yarn', finalYarnWeight);
 
     startTransition(() => {
       router.push(`/explore?${params.toString()}`);
@@ -146,6 +177,15 @@ export default function ExploreClient({
 
   const fallbackImage =
     'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
+
+  const hasActiveFilters = Boolean(
+    currentCategory ||
+      currentDifficulty ||
+      currentLanguage ||
+      currentHookSize ||
+      currentYarnWeight ||
+      query
+  );
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D] pb-24">
@@ -189,11 +229,13 @@ export default function ExploreClient({
             </svg>
           </div>
 
+          {/* Filter Bar with Hook Size and Yarn Weight */}
           <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Category Dropdown */}
             <select
               value={currentCategory}
               onChange={handleCategoryChange}
-              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
             >
               <option value="">All Categories</option>
               <option value="Garments">Garments</option>
@@ -203,10 +245,11 @@ export default function ExploreClient({
               <option value="Blankets">Blankets</option>
             </select>
 
+            {/* Difficulty Dropdown */}
             <select
               value={currentDifficulty}
-              onChange={(e) => updateFilters(undefined, e.target.value, undefined)}
-              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+              onChange={(e) => updateFilters(undefined, e.target.value, undefined, undefined, undefined)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
             >
               <option value="">All Difficulties</option>
               <option value="Beginner">Beginner</option>
@@ -215,10 +258,48 @@ export default function ExploreClient({
               <option value="Advanced">Advanced</option>
             </select>
 
+            {/* Hook Size Dropdown */}
+            <select
+              value={currentHookSize}
+              onChange={(e) => updateFilters(undefined, undefined, undefined, e.target.value, undefined)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
+            >
+              <option value="">All Hook Sizes</option>
+              <option value="2.5mm">2.5 mm</option>
+              <option value="3.0mm">3.0 mm</option>
+              <option value="3.5mm">3.5 mm (E)</option>
+              <option value="4.0mm">4.0 mm (G)</option>
+              <option value="4.5mm">4.5 mm (7)</option>
+              <option value="5.0mm">5.0 mm (H)</option>
+              <option value="5.5mm">5.5 mm (I)</option>
+              <option value="6.0mm">6.0 mm (J)</option>
+              <option value="6.5mm">6.5 mm (K)</option>
+              <option value="8.0mm">8.0 mm (L)</option>
+              <option value="10.0mm">10.0 mm (N)</option>
+            </select>
+
+            {/* Yarn Weight Dropdown */}
+            <select
+              value={currentYarnWeight}
+              onChange={(e) => updateFilters(undefined, undefined, undefined, undefined, e.target.value)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
+            >
+              <option value="">All Yarn Weights</option>
+              <option value="Lace">0 - Lace</option>
+              <option value="Super Fine">1 - Super Fine</option>
+              <option value="Fine">2 - Fine / Sport</option>
+              <option value="Light">3 - Light / DK</option>
+              <option value="Worsted">4 - Medium / Worsted</option>
+              <option value="Bulky">5 - Bulky</option>
+              <option value="Super Bulky">6 - Super Bulky</option>
+              <option value="Jumbo">7 - Jumbo</option>
+            </select>
+
+            {/* Language Dropdown */}
             <select
               value={currentLanguage}
-              onChange={(e) => updateFilters(undefined, undefined, e.target.value)}
-              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700"
+              onChange={(e) => updateFilters(undefined, undefined, e.target.value, undefined, undefined)}
+              className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
             >
               <option value="">All Languages</option>
               <option value="English">English</option>
@@ -230,7 +311,7 @@ export default function ExploreClient({
               <option value="Portuguese">Portuguese</option>
             </select>
 
-            {(currentCategory || currentDifficulty || currentLanguage) && (
+            {hasActiveFilters && (
               <button
                 onClick={() => {
                   setSearchInput('');
@@ -260,7 +341,7 @@ export default function ExploreClient({
           </div>
         ) : patterns.length === 0 ? (
           <div className="text-center py-20 text-gray-500 font-medium border-2 border-dashed border-gray-200 rounded-2xl">
-            We couldn't find any patterns matching your filters. Try clearing them to see more!
+            We couldn&apos;t find any patterns matching your filters. Try clearing them to see more!
           </div>
         ) : (
           <>
@@ -292,10 +373,11 @@ export default function ExploreClient({
                             <h2 className="font-bold text-sm sm:text-lg leading-tight mb-1 truncate">
                               {pattern.title}
                             </h2>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs sm:text-sm opacity-90 font-medium truncate mr-2">
-                                Difficulty: {pattern.difficulty_level || 'Varies'}
-                              </p>
+                            <div className="flex items-center justify-between text-xs sm:text-sm opacity-90 font-medium">
+                              <span>Hook: {pattern.hook_size || 'Varies'}</span>
+                              <span className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 bg-white/20 rounded backdrop-blur-sm">
+                                {pattern.difficulty_level || 'Beginner'}
+                              </span>
                             </div>
                           </div>
                         </div>

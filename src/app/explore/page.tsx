@@ -21,16 +21,22 @@ export async function generateMetadata({
   const resolvedParams = await searchParams;
   const q = typeof resolvedParams.q === 'string' ? resolvedParams.q.trim() : '';
   const category = typeof resolvedParams.category === 'string' ? resolvedParams.category : '';
+  const hook = typeof resolvedParams.hook === 'string' ? resolvedParams.hook : '';
+  const yarn = typeof resolvedParams.yarn === 'string' ? resolvedParams.yarn : '';
 
   const title = q
     ? `"${q}" Crochet Patterns | Search Crpapo`
     : category
     ? `Free ${category} Crochet Patterns | Crpapo`
+    : hook
+    ? `${hook} Hook Crochet Patterns | Crpapo`
+    : yarn
+    ? `${yarn} Yarn Crochet Patterns | Crpapo`
     : 'Explore Free Interactive Crochet Patterns | Crpapo';
 
   const description = q
     ? `Browse free interactive crochet patterns matching "${q}" with step-by-step row counters.`
-    : 'Search and filter hundreds of free, interactive crochet patterns by category, difficulty, and language.';
+    : 'Search and filter hundreds of free, interactive crochet patterns by category, hook size, yarn weight, and difficulty.';
 
   return {
     title,
@@ -72,6 +78,8 @@ export default async function ExplorePage({
     typeof resolvedParams.difficulty === 'string' ? resolvedParams.difficulty : '';
   const language =
     typeof resolvedParams.language === 'string' ? resolvedParams.language : '';
+  const hook = typeof resolvedParams.hook === 'string' ? resolvedParams.hook : '';
+  const yarn = typeof resolvedParams.yarn === 'string' ? resolvedParams.yarn : '';
 
   let dbQuery = supabase
     .from('patterns')
@@ -84,6 +92,11 @@ export default async function ExplorePage({
   if (category) dbQuery = dbQuery.eq('category', category);
   if (difficulty) dbQuery = dbQuery.eq('difficulty_level', difficulty);
   if (language) dbQuery = dbQuery.eq('language', language);
+  if (hook) {
+    const cleanHook = hook.replace(/[^\d.]/g, '');
+    dbQuery = dbQuery.ilike('hook_size', `%${cleanHook}%`);
+  }
+  if (yarn) dbQuery = dbQuery.ilike('yarn_weight', `%${yarn}%`);
 
   let patterns: any[] = [];
   try {

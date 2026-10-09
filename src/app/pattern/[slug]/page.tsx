@@ -88,11 +88,11 @@ export default async function PatternPage({
     notFound();
   }
 
-  // Fetch designer, steps, and related patterns in parallel on the server
+  // Fetch designer (including tip_link), steps, and related patterns in parallel on the server
   const [profileRes, stepsRes, relatedRes] = await Promise.all([
     supabase
       .from('profiles')
-      .select('username')
+      .select('username, tip_link')
       .eq('id', pattern.designer_id)
       .single(),
     supabase
@@ -109,6 +109,7 @@ export default async function PatternPage({
   ]);
 
   const designerName = profileRes.data?.username || 'Creator';
+  const designerTipLink = profileRes.data?.tip_link || null;
   const steps = stepsRes.data || [];
   const relatedPatterns = relatedRes.data || [];
 
@@ -192,6 +193,7 @@ export default async function PatternPage({
       <PatternClient
         initialPattern={pattern}
         initialDesignerName={designerName}
+        initialDesignerTipLink={designerTipLink}
         initialSteps={steps}
         initialRelatedPatterns={relatedPatterns}
         slug={slug}
