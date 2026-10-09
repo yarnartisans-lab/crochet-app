@@ -38,6 +38,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  verification: {
+    other: {
+      "p:domain_verify": "8fbe8e6a4ad6718cfa765e8516f48cee",
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -124,6 +129,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Pinterest Domain Verification */}
+        <meta name="p:domain_verify" content="8fbe8e6a4ad6718cfa765e8516f48cee" />
         {/* Global WebSite & Organization Structured Data */}
         <script
           type="application/ld+json"
