@@ -1,221 +1,157 @@
-'use client';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+import CreatorClient from './CreatorClient';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { createClient } from '@/utils/supabase/client';
+// Revalidate every 60 seconds (ISR)
+export const revalidate = 60;
 
-export default function CreatorProfile() {
-  const params = useParams();
-  const supabase = createClient();
-  
-  const [profile, setProfile] = useState<any>(null);
-  const [patterns, setPatterns] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  useEffect(() => {
-    async function fetchCreatorData() {
-      if (!params.username) return;
-      const decodedUsername = decodeURIComponent(params.username as string);
+async function getCreatorData(username: string) {
+  const decodedUsername = decodeURIComponent(username);
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', decodedUsername)
-        .single();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('username', decodedUsername)
+    .single();
 
-      if (profileData) {
-        setProfile(profileData);
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.id === profileData.id) {
-          setIsOwner(true);
-        }
+  if (!profile) return { profile: null, patterns: [] };
 
-        const { data: patternsData } = await supabase
-          .from('patterns')
-          .select('*')
-          .eq('designer_id', profileData.id)
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
+  const { data: patterns } = await supabase
+    .from('patterns')
+    .select('*')
+    .eq('designer_id', profile.id)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false });
 
-        if (patternsData) setPatterns(patternsData);
-      }
-      setLoading(false);
-    }
-    fetchCreatorData();
-  }, [params.username]);
+  return { profile, patterns: patterns || [] };
+}
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+// 1. DYNAMIC PROGRAMMATIC SEO FOR CREATORS
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const { profile, patterns } = await getCreatorData(username);
+
+  if (!profile) {
+    return {
+      title: 'Creator Not Found | Crpapo',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const canonicalUrl = `https://crpapo.com/creator/${encodeURIComponent(profile.username)}`;
+  const title = `@${profile.username} | Crochet Designer Profile & Free Patterns | Crpapo`;
+  const description = profile.bio
+    ? profile.bio.slice(0, 160)
+    : `Explore ${patterns.length} free, interactive crochet pattern${patterns.length === 1 ? '' : 's'} designed by @${profile.username} on Crpapo.`;
+  const avatar = profile.avatar_url || 'https://crpapo.com/icon.png';
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Crpapo',
+      images: [
+        {
+          url: avatar,
+          alt: `@${profile.username}'s profile picture`,
+        },
+      ],
+      type: 'profile',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [avatar],
+    },
   };
+}
 
-  const fallbackImage = 'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
+export default async function CreatorPage({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
+  const { profile, patterns } = await getCreatorData(username);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9] text-gray-500">Loading creator profile...</div>;
-  if (!profile) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAFAF9] text-[#2D2D2D] space-y-4">
-      <h1 className="text-2xl font-bold">Creator not found</h1>
-      <Link href="/" className="text-[#D97757] hover:underline">Return to home</Link>
-    </div>
-  );
+  if (!profile) {
+    notFound();
+  }
 
-  // 1. E-E-A-T SCHEMA: Proves to Google this is a real, authoritative creator
+  const fallbackImage =
+    'https://images.unsplash.com/photo-1605335123403-5188147dccdf?q=80&w=800&auto=format&fit=crop';
+
+  // 1. E-E-A-T ProfilePage / Person Schema
   const profileSchema = {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    "mainEntity": {
-      "@type": "Person",
-      "name": profile.username,
-      "description": profile.bio || `Crochet designer and creator of ${patterns.length} patterns on Crpapo.`,
-      "image": profile.avatar_url || fallbackImage,
-      "sameAs": [
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    mainEntity: {
+      '@type': 'Person',
+      name: profile.username,
+      description:
+        profile.bio ||
+        `Crochet designer and creator of ${patterns.length} pattern${patterns.length === 1 ? '' : 's'} on Crpapo.`,
+      image: profile.avatar_url || fallbackImage,
+      sameAs: [
         profile.website_url,
         profile.pinterest_url,
         profile.instagram_url,
-        profile.youtube_url
-      ].filter(Boolean) // This automatically links their external authority (like a big Instagram) to your domain
-    }
+        profile.youtube_url,
+      ].filter(Boolean),
+    },
   };
 
-  // 2. ITEMLIST SCHEMA: Catalogs their specific patterns
-  const itemListSchema = patterns.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "itemListElement": patterns.map((pattern, index) => ({
-      "@type": "ListItem",
-      "position": index + 1,
-      "url": `https://crpapo.com/pattern/${pattern.slug || pattern.id}`,
-      "name": pattern.title
-    }))
-  } : null;
+  // 2. ItemList Schema for creator's published patterns
+  const itemListSchema =
+    patterns.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          itemListElement: patterns.map((pattern: any, index: number) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            url: `https://crpapo.com/pattern/${pattern.slug || pattern.id}`,
+            name: pattern.title,
+          })),
+        }
+      : null;
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-[#2D2D2D]">
-      {/* Injecting the dynamic Schemas */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }} />
-      {itemListSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />}
-
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-extrabold tracking-tighter">Crpapo</Link>
-          <Link href="/explore" className="text-sm font-semibold text-gray-500 hover:text-[#D97757]">Explore Patterns</Link>
-        </div>
-      </nav>
-
-      <header className="bg-white border-b border-gray-200 py-16 px-6">
-        <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center md:items-start gap-8 text-center md:text-left">
-          
-          <div className="w-32 h-32 relative rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex-shrink-0">
-            {profile.avatar_url ? (
-              <Image 
-                src={profile.avatar_url} 
-                alt={`${profile.username}'s profile picture`} 
-                fill
-                className="object-cover"
-                sizes="128px"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
-                <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex-1 space-y-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">@{profile.username}</h1>
-              <p className="text-gray-500 font-medium mt-1">{patterns.length} Published Patterns</p>
-            </div>
-            
-            {profile.bio && (
-              <p className="text-[#2D2D2D] leading-relaxed max-w-xl">{profile.bio}</p>
-            )}
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
-              {profile.website_url && (
-                <a href={profile.website_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#D97757] hover:text-[#C26243] bg-[#D97757]/10 px-3 py-1.5 rounded-full transition-colors">
-                  Website
-                </a>
-              )}
-              {profile.pinterest_url && (
-                <a href={profile.pinterest_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#E60023] hover:text-[#ad081b] bg-[#E60023]/10 px-3 py-1.5 rounded-full transition-colors">
-                  Pinterest
-                </a>
-              )}
-              {profile.instagram_url && (
-                <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#E1306C] hover:text-[#b02251] bg-[#E1306C]/10 px-3 py-1.5 rounded-full transition-colors">
-                  Instagram
-                </a>
-              )}
-              {profile.youtube_url && (
-                <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-[#FF0000] hover:text-[#cc0000] bg-[#FF0000]/10 px-3 py-1.5 rounded-full transition-colors">
-                  YouTube
-                </a>
-              )}
-            </div>
-
-            <div className="pt-4 flex flex-wrap justify-center md:justify-start gap-3">
-              <button 
-                onClick={handleShare}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
-              >
-                {copied ? 'Link Copied!' : 'Copy Profile Link'}
-              </button>
-
-              {isOwner && (
-                <Link href="/settings" className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-5 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-200 transition-colors">
-                  Edit Profile
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Linked <main> directly to the H2 title for document structure */}
-      <main aria-labelledby="creator-patterns-title" className="max-w-7xl mx-auto px-6 py-16">
-        <h2 id="creator-patterns-title" className="text-xl font-bold tracking-tight mb-8">Patterns by @{profile.username}</h2>
-        
-        {patterns.length === 0 ? (
-          <div className="text-center py-20 text-gray-500 font-medium border-2 border-dashed border-gray-200 rounded-2xl">
-            This creator hasn't published any patterns yet.
-          </div>
-        ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-            {patterns.map((pattern) => {
-              const imageUrl = pattern.image_urls?.[0] || pattern.image_url || fallbackImage;
-              return (
-                // Upgraded to <article> and <h3>
-                <article key={pattern.id} className="group block break-inside-avoid">
-                  <Link href={`/pattern/${pattern.slug || pattern.id}`}>
-                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
-                      <Image 
-                        src={imageUrl} 
-                        alt={`Free pattern: ${pattern.title}`} 
-                        width={600}
-                        height={800}
-                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-                        <div className="text-white w-full">
-                          <h3 className="font-bold text-lg leading-tight mb-1 truncate">{pattern.title}</h3>
-                          <p className="text-sm opacity-90 font-medium">Difficulty: {pattern.difficulty_level || 'Varies'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </main>
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(profileSchema) }}
+      />
+      {itemListSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        />
+      )}
+      <CreatorClient
+        initialProfile={profile}
+        initialPatterns={patterns}
+        username={profile.username}
+      />
+    </>
   );
 }
