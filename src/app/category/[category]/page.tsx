@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
+import PinButton from '@/components/PinButton';
 
 // Cache category pages for 60 seconds (ISR) for instant TTFB
 export const revalidate = 60;
@@ -199,8 +200,8 @@ export default async function CategoryPage({
 
               return (
                 <article key={pattern.id} className="group block break-inside-avoid">
-                  <Link href={`/pattern/${pattern.slug || pattern.id}`}>
-                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                  <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                    <Link href={`/pattern/${pattern.slug || pattern.id}`} className="block">
                       <Image
                         src={imageUrl}
                         alt={seoAltText}
@@ -218,8 +219,16 @@ export default async function CategoryPage({
                           </p>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+
+                    {/* Floating Pinterest Pin Button */}
+                    <PinButton
+                      slug={pattern.slug || pattern.id}
+                      title={pattern.title}
+                      imageUrl={imageUrl}
+                      className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
+                    />
+                  </div>
                 </article>
               );
             })}

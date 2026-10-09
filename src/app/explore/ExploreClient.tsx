@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
+import PinButton from '@/components/PinButton';
 
 const PAGE_SIZE = 24;
 
@@ -265,17 +266,19 @@ export default function ExploreClient({
               className="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium hover:border-[#D97757] transition-colors bg-white focus:ring-2 focus:ring-[#D97757] outline-none cursor-pointer text-gray-700 whitespace-nowrap"
             >
               <option value="">All Hook Sizes</option>
-              <option value="2.5mm">2.5 mm</option>
-              <option value="3.0mm">3.0 mm</option>
-              <option value="3.5mm">3.5 mm (E)</option>
-              <option value="4.0mm">4.0 mm (G)</option>
-              <option value="4.5mm">4.5 mm (7)</option>
-              <option value="5.0mm">5.0 mm (H)</option>
-              <option value="5.5mm">5.5 mm (I)</option>
-              <option value="6.0mm">6.0 mm (J)</option>
-              <option value="6.5mm">6.5 mm (K)</option>
-              <option value="8.0mm">8.0 mm (L)</option>
-              <option value="10.0mm">10.0 mm (N)</option>
+              <option value="2.0">2.0mm</option>
+              <option value="2.5">2.5mm</option>
+              <option value="3.0">3.0mm</option>
+              <option value="3.5">3.5mm (E)</option>
+              <option value="4.0">4.0mm (G)</option>
+              <option value="4.5">4.5mm (7)</option>
+              <option value="5.0">5.0mm (H)</option>
+              <option value="5.5">5.5mm (I)</option>
+              <option value="6.0">6.0mm (J)</option>
+              <option value="6.5">6.5mm (K)</option>
+              <option value="8.0">8.0mm (L)</option>
+              <option value="9.0">9.0mm (M/N)</option>
+              <option value="10.0">10.0mm (N/P)</option>
             </select>
 
             {/* Yarn Weight Dropdown */}
@@ -359,8 +362,8 @@ export default function ExploreClient({
 
                 return (
                   <article key={pattern.id} className="group block break-inside-avoid">
-                    <Link href={`/pattern/${pattern.slug || pattern.id}`}>
-                      <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                    <div className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm border border-gray-200">
+                      <Link href={`/pattern/${pattern.slug || pattern.id}`} className="block">
                         <Image
                           src={imageUrl}
                           alt={seoAltText}
@@ -381,8 +384,16 @@ export default function ExploreClient({
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+
+                      {/* Floating Pinterest Pin Button */}
+                      <PinButton
+                        slug={pattern.slug || pattern.id}
+                        title={pattern.title}
+                        imageUrl={imageUrl}
+                        className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 opacity-90 sm:opacity-0 sm:group-hover:opacity-100"
+                      />
+                    </div>
                   </article>
                 );
               })}
@@ -393,9 +404,7 @@ export default function ExploreClient({
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  className={`inline-block bg-white border border-gray-200 text-[#2D2D2D] font-bold py-3 px-8 rounded-full hover:border-[#D97757] hover:text-[#D97757] transition-colors shadow-sm ${
-                    loadingMore ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className="bg-white border border-gray-200 text-[#2D2D2D] font-bold py-3 px-8 rounded-full hover:border-[#D97757] hover:text-[#D97757] transition-colors disabled:opacity-50 shadow-sm"
                 >
                   {loadingMore ? 'Loading...' : 'Load More Patterns'}
                 </button>

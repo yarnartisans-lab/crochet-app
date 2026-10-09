@@ -1,5 +1,5 @@
 import { Analytics } from "@vercel/analytics/react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  themeColor: "#D97757",
+};
 
 // Global SEO Metadata for Crpapo
 export const metadata: Metadata = {
@@ -42,6 +46,11 @@ export const metadata: Metadata = {
     other: {
       "p:domain_verify": "8fbe8e6a4ad6718cfa765e8516f48cee",
     },
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Crpapo",
   },
   openGraph: {
     type: "website",
@@ -129,6 +138,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* PWA / Mobile Web App Meta */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Crpapo" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+
         {/* Pinterest Domain Verification */}
         <meta name="p:domain_verify" content="8fbe8e6a4ad6718cfa765e8516f48cee" />
         {/* Global WebSite & Organization Structured Data */}

@@ -34,7 +34,7 @@ export default function PatternClient({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isReported, setIsReported] = useState(false);
 
-  // New Features: Screen Wake Lock, Stitch Counter, and Cloud Bookmarking
+  // Screen Wake Lock, Stitch Counter, and Cloud Bookmarking
   const [isWakeLocked, setIsWakeLocked] = useState(false);
   const [wakeLockSentinel, setWakeLockSentinel] = useState<any>(null);
   const [stitchCount, setStitchCount] = useState(0);
@@ -254,6 +254,18 @@ export default function PatternClient({
     }
   };
 
+  // Pinterest Share Intent (Traffic Engine)
+  const handlePinterestPin = () => {
+    if (typeof window === 'undefined') return;
+    const pageUrl = window.location.href;
+    const imgUrl = images[currentImageIndex] || '';
+    const pinDescription = `Free ${pattern.title} crochet pattern with interactive row tracking on Crpapo! Designed by @${designerName}`;
+    const pinUrl = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(
+      pageUrl
+    )}&media=${encodeURIComponent(imgUrl)}&description=${encodeURIComponent(pinDescription)}`;
+    window.open(pinUrl, '_blank', 'noopener,noreferrer,width=750,height=600');
+  };
+
   const handleOutboundClick = async () => {
     if (pattern?.id) {
       await supabase.rpc('increment_clicks', { pattern_id: pattern.id });
@@ -392,7 +404,7 @@ export default function PatternClient({
           {/* Sidebar */}
           <aside className="md:col-span-1 space-y-6">
             <div className="space-y-3">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm group">
                 <Image
                   src={images[currentImageIndex]}
                   alt={seoAltText}
@@ -401,7 +413,20 @@ export default function PatternClient({
                   className="object-cover transition-opacity duration-300 pointer-events-none"
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
+
+                {/* Instant Pinterest Pin Button overlay */}
+                <button
+                  onClick={handlePinterestPin}
+                  title="Save to Pinterest"
+                  className="absolute top-3 right-3 z-10 bg-[#E60023] hover:bg-[#ad081b] text-white p-2 rounded-full shadow-md transition-all flex items-center gap-1.5 text-xs font-bold opacity-90 hover:opacity-100 print:hidden"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                  </svg>
+                  <span>Pin</span>
+                </button>
               </div>
+
               {images.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 print:hidden">
                   {images.map((img: string, idx: number) => (
@@ -467,6 +492,17 @@ export default function PatternClient({
                   ☕ Tip Designer (Support)
                 </a>
               )}
+
+              {/* Pin to Pinterest Button */}
+              <button
+                onClick={handlePinterestPin}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-sm font-bold bg-[#E60023] text-white hover:bg-[#ad081b] transition-all shadow-sm"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                </svg>
+                Pin to Pinterest
+              </button>
 
               {/* Yarn Affiliate Link */}
               <a
@@ -651,6 +687,16 @@ export default function PatternClient({
                 })
               )}
             </ol>
+
+            {/* Print Attribution Footer */}
+            <div className="hidden print:block pt-8 border-t border-gray-300 text-center text-xs text-gray-500 mt-12">
+              <p className="font-bold text-gray-700">
+                Track this pattern interactively online at https://crpapo.com/pattern/{pattern.slug || slug}
+              </p>
+              <p className="mt-1">
+                © {new Date().getFullYear()} Crpapo. Pattern designed by @{designerName}.
+              </p>
+            </div>
           </section>
         </div>
 

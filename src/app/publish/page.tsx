@@ -33,6 +33,15 @@ export default function PublishWizard() {
   const [videoLink, setVideoLink] = useState('');
   const [instructions, setInstructions] = useState([{ step_number: 1, instruction: '' }]);
 
+  // Post-publish success state for Pinterest promotion
+  const [publishedPattern, setPublishedPattern] = useState<{
+    id: string;
+    slug: string;
+    title: string;
+    imageUrl: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
   // Authentication Check
   useEffect(() => {
     async function checkAuth() {
@@ -62,7 +71,6 @@ export default function PublishWizard() {
   const removeInstructionRow = (index: number) => {
     if (instructions.length > 1) {
       const newInstructions = instructions.filter((_, i) => i !== index);
-      // Re-number the steps
       const renumbered = newInstructions.map((inst, i) => ({ ...inst, step_number: i + 1 }));
       setInstructions(renumbered);
     }
@@ -141,10 +149,10 @@ export default function PublishWizard() {
     const baseSlug =
       title
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-') // Replaces spaces and special chars with hyphens
-        .replace(/(^-|-$)+/g, '') || 'crochet-pattern'; // Fallback ensures slug is never empty
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') || 'crochet-pattern';
 
-    // 2. High-Performance Slug Checker (Single Query)
+    // 2. High-Performance Slug Checker
     let finalSlug = baseSlug;
 
     const { data: existingPattern } = await supabase
@@ -154,14 +162,13 @@ export default function PublishWizard() {
       .maybeSingle();
 
     if (existingPattern) {
-      // If the base slug is taken, append a random 5-character hash to guarantee uniqueness
       const randomHash = Math.random().toString(36).substring(2, 7);
       finalSlug = `${baseSlug}-${randomHash}`;
     }
 
     let finalUrls: string[] = [];
 
-    // 3. Upload all images with the guaranteed unique slug
+    // 3. Upload all images
     for (let i = 0; i < images.length; i++) {
       const uniqueSuffix = Date.now().toString().slice(-4);
       const fileName = `${finalSlug}-${i + 1}-${uniqueSuffix}.webp`;
@@ -184,7 +191,7 @@ export default function PublishWizard() {
       .insert({
         designer_id: user.id,
         title,
-        slug: finalSlug, // USING THE VERIFIED UNIQUE SLUG HERE
+        slug: finalSlug,
         difficulty_level: difficulty,
         hook_size: hookSize,
         yarn_weight: yarnWeight,
@@ -221,8 +228,35 @@ export default function PublishWizard() {
       await supabase.from('pattern_steps').insert(stepsToInsert);
     }
 
-    // Redirect to the newly generated unique slug
-    router.push(`/pattern/${patternData.slug}`);
+    // 6. Transition to Step 4: Celebration and Pinterest promotion prompt
+    setPublishedPattern({
+      id: patternData.id,
+      slug: patternData.slug,
+      title: patternData.title,
+      imageUrl: mainImageUrl || '',
+    });
+    setStep(4);
+    setLoading(false);
+  };
+
+  // Pinterest Share Intent
+  const handlePinToPinterest = () => {
+    if (!publishedPattern || typeof window === 'undefined') return;
+    const pageUrl = `${window.location.origin}/pattern/${publishedPattern.slug}`;
+    const imgUrl = publishedPattern.imageUrl;
+    const pinDescription = `Free ${publishedPattern.title} crochet pattern with interactive row tracking on Crpapo!`;
+    const pinUrl = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(
+      pageUrl
+    )}&media=${encodeURIComponent(imgUrl)}&description=${encodeURIComponent(pinDescription)}`;
+    window.open(pinUrl, '_blank', 'noopener,noreferrer,width=750,height=600');
+  };
+
+  const handleCopyLink = () => {
+    if (!publishedPattern || typeof window === 'undefined') return;
+    const pageUrl = `${window.location.origin}/pattern/${publishedPattern.slug}`;
+    navigator.clipboard.writeText(pageUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -233,10 +267,18 @@ export default function PublishWizard() {
             href="/dashboard"
             className="text-sm font-semibold text-gray-500 hover:text-[#2D2D2D]"
           >
-            Cancel
+            {step === 4 ? 'Dashboard' : 'Cancel'}
           </Link>
-          <span className="font-bold tracking-tight">Create Pattern</span>
-          <div className="text-sm font-semibold text-gray-400">Step {step} of 3</div>
+          <span className="font-bold tracking-tight">
+            {step === 4 ? 'Pattern Live!' : 'Create Pattern'}
+          </span>
+          <div className="text-sm font-semibold text-gray-400">
+            {step === 4 ? (
+              <span className="text-green-600 font-bold">Done ✨</span>
+            ) : (
+              `Step ${step} of 3`
+            )}
+          </div>
         </div>
       </nav>
 
@@ -374,7 +416,12 @@ export default function PublishWizard() {
 
               {/* Multiple Image Uploader */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium">Photos ({images.length}/4)</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium">Photos ({images.length}/4)</label>
+                  <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold">
+                    💡 Tip: 2:3 vertical photos rank 4x higher on Pinterest
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {images.map((img, index) => (
                     <div
@@ -526,6 +573,77 @@ export default function PublishWizard() {
                 >
                   {loading ? 'Publishing...' : 'Publish to Crpapo ✨'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: CELEBRATION & PINTEREST PROMOTION */}
+          {step === 4 && publishedPattern && (
+            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 text-center py-4">
+              <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-sm">
+                🎉
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-extrabold tracking-tight">Your pattern is live!</h2>
+                <p className="text-gray-500 mt-2 max-w-md mx-auto text-sm">
+                  &quot;{publishedPattern.title}&quot; is published on Crpapo with interactive row tracking.
+                </p>
+              </div>
+
+              {/* Promotion Callout Box */}
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl border border-red-100 text-left space-y-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📌</span>
+                  <h3 className="font-bold text-gray-900 text-base">Drive Traffic from Pinterest</h3>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Over 60% of crochet traffic comes from Pinterest. Pin your new pattern now to reach thousands of crafters and maximize your yarn affiliate earnings.
+                </p>
+
+                <button
+                  onClick={handlePinToPinterest}
+                  className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-sm font-bold bg-[#E60023] hover:bg-[#ad081b] text-white shadow-md transition-all hover:scale-[1.01]"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+                  </svg>
+                  <span>Pin to Pinterest Now</span>
+                </button>
+              </div>
+
+              {/* Secondary Sharing Actions */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleCopyLink}
+                  className="flex-1 py-3 px-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                    />
+                  </svg>
+                  <span>{copied ? 'Copied Link!' : 'Copy Link for Bio'}</span>
+                </button>
+
+                <Link
+                  href={`/pattern/${publishedPattern.slug}`}
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#2D2D2D] hover:bg-black text-sm font-semibold text-white transition-colors shadow-sm flex items-center justify-center gap-2"
+                >
+                  <span>View Live Pattern →</span>
+                </Link>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/dashboard"
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-semibold"
+                >
+                  Go to Creator Dashboard
+                </Link>
               </div>
             </div>
           )}
